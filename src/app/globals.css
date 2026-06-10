@@ -843,7 +843,7 @@ input[type="color"] {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(340px, 1.05fr);
   gap: 28px;
-  align-items: center;
+  align-items: start;
   width: min(960px, 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
