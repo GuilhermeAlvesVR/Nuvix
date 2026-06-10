@@ -1,0 +1,50 @@
+{
+  "name": "nuvix-consultorios",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "migrate:saas-approval": "node prisma/apply-saas-approval-migration.mjs",
+    "migrate:performance": "node prisma/apply-performance-indexes.mjs",
+    "migrate:patient-notes": "node prisma/apply-patient-notes-migration.mjs",
+    "migrate:patient-notes-updated-by": "node prisma/apply-patient-notes-updated-by-migration.mjs",
+    "migrate:workspace-types": "node prisma/apply-workspace-types-migration.mjs",
+    "migrate:workspace-background": "node prisma/apply-workspace-background-color-migration.mjs",
+    "seed:platform-admin": "node prisma/seed-platform-admin.mjs",
+    "seed:templates": "node prisma/seed-templates.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "mercadopago": "^3.1.0",
+    "next": "^16.2.7",
+    "papaparse": "^5.5.3",
+    "prisma": "^5.22.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20.17.6",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.2.7",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
+  }
+}

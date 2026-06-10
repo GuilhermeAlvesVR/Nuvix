@@ -1,0 +1,465 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  ADMIN
+  RECEPTIONIST
+  PROFESSIONAL
+}
+
+enum WorkspaceStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum WorkspaceType {
+  HEALTH
+  DENTAL
+  PSYCHOLOGY
+  PHYSIOTHERAPY
+  NUTRITION
+  BEAUTY
+  CONSULTING
+  LEGAL
+  ACCOUNTING
+  ARCHITECTURE
+  COACHING_THERAPY
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum FinancialStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  PIX
+  BANK_TRANSFER
+  OTHER
+}
+
+enum EntryStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PatientNoteCategory {
+  ADMINISTRATIVE
+  OPERATIONAL
+}
+
+model Workspace {
+  id                    String           @id @default(cuid())
+  name                  String
+  slug                  String           @unique
+  type                  WorkspaceType    @default(HEALTH)
+  status                WorkspaceStatus  @default(PENDING_APPROVAL)
+  ownerName             String?          @map("owner_name")
+  ownerEmail            String?          @map("owner_email")
+  ownerPhone            String?          @map("owner_phone")
+  logoUrl               String?          @map("logo_url")
+  primaryColor          String           @default("#116466") @map("primary_color")
+  accentColor           String           @default("#d9b08c") @map("accent_color")
+  backgroundColor       String           @default("#f6f3ee") @map("background_color")
+  clientLabelSingular   String?          @map("client_label_singular")
+  clientLabelPlural     String?          @map("client_label_plural")
+  professionalLabel     String?          @map("professional_label")
+  appointmentLabel      String?          @map("appointment_label")
+  recordLabel           String?          @map("record_label")
+  plan                  String           @default("FREE") @map("plan")
+  billingDay            Int?             @map("billing_day")
+  mercadoPagoCustomerId String?          @map("mercado_pago_customer_id")
+  active                Boolean          @default(true)
+  users                 User[]
+  patients              Patient[]
+  professionals         Professional[]
+  appointments          Appointment[]
+  clinicalRecords       ClinicalRecord[]
+  clinicalTemplates     ClinicalTemplate[]
+  payments              Payment[]
+  expenses              Expense[]
+  platformInvoices      PlatformInvoice[]
+  patientNotes          PatientNote[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  reminderConfig        WorkspaceReminderConfig?
+  approvedAt            DateTime?        @map("approved_at")
+  rejectedAt            DateTime?        @map("rejected_at")
+  suspendedAt           DateTime?        @map("suspended_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  @@map("workspaces")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  workspaceId  String        @map("workspace_id")
+  name         String
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         UserRole
+  active       Boolean       @default(true)
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id])
+  professional Professional?
+  appointments Appointment[] @relation("AppointmentCreatedBy")
+  records      ClinicalRecord[] @relation("RecordCreatedBy")
+  updatedRecords ClinicalRecord[] @relation("RecordUpdatedBy")
+  payments     Payment[]
+  expenses     Expense[]
+  createdPatientNotes PatientNote[] @relation("PatientNoteCreatedBy")
+  archivedPatientNotes PatientNote[] @relation("PatientNoteArchivedBy")
+  updatedPatientNotes PatientNote[] @relation("PatientNoteUpdatedBy")
+  auditLogs    AuditLog[]
+  notifications Notification[]
+  notificationPreferences NotificationPreference?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, role, active])
+  @@map("users")
+}
+
+model Patient {
+  id             String           @id @default(cuid())
+  workspaceId    String           @map("workspace_id")
+  name           String
+  birthDate      DateTime?        @map("birth_date") @db.Date
+  phone          String?
+  email          String?
+  document       String?
+  address        String?
+  notes          String?
+  active         Boolean          @default(true)
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id])
+  appointments   Appointment[]
+  clinicalRecords ClinicalRecord[]
+  payments       Payment[]
+  patientNotes   PatientNote[]
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, document])
+  @@index([workspaceId, name])
+  @@index([workspaceId, phone])
+  @@index([workspaceId, email])
+  @@index([workspaceId, active, name])
+  @@map("patients")
+}
+
+model PatientNote {
+  id               String              @id @default(cuid())
+  workspaceId      String              @map("workspace_id")
+  patientId        String              @map("patient_id")
+  content          String
+  category         PatientNoteCategory @default(ADMINISTRATIVE)
+  important        Boolean             @default(false)
+  archivedAt       DateTime?           @map("archived_at")
+  archivedByUserId String?             @map("archived_by_user_id")
+  createdByUserId  String              @map("created_by_user_id")
+  updatedByUserId  String?             @map("updated_by_user_id")
+  workspace        Workspace           @relation(fields: [workspaceId], references: [id])
+  patient          Patient             @relation(fields: [patientId], references: [id])
+  createdBy        User                @relation("PatientNoteCreatedBy", fields: [createdByUserId], references: [id])
+  archivedBy       User?               @relation("PatientNoteArchivedBy", fields: [archivedByUserId], references: [id])
+  updatedBy        User?               @relation("PatientNoteUpdatedBy", fields: [updatedByUserId], references: [id])
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  @@index([workspaceId, patientId, createdAt])
+  @@index([workspaceId, patientId, archivedAt])
+  @@index([workspaceId, createdByUserId])
+  @@map("patient_notes")
+}
+
+model Professional {
+  id                   String           @id @default(cuid())
+  workspaceId          String           @map("workspace_id")
+  userId               String?          @unique @map("user_id")
+  user                 User?            @relation(fields: [userId], references: [id])
+  workspace            Workspace        @relation(fields: [workspaceId], references: [id])
+  name                 String
+  specialty            String?
+  professionalDocument String?          @map("professional_document")
+  phone                String?
+  email                String?
+  active               Boolean          @default(true)
+  appointments         Appointment[]
+  clinicalRecords      ClinicalRecord[]
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, active, name])
+  @@map("professionals")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  workspaceId     String            @map("workspace_id")
+  patientId       String            @map("patient_id")
+  professionalId  String            @map("professional_id")
+  startsAt        DateTime          @map("starts_at")
+  endsAt          DateTime          @map("ends_at")
+  type            String?
+  status          AppointmentStatus @default(SCHEDULED)
+  price           Decimal           @db.Decimal(10, 2)
+  financialStatus FinancialStatus   @default(PENDING) @map("financial_status")
+  notes           String?
+  createdByUserId String            @map("created_by_user_id")
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id])
+  patient         Patient           @relation(fields: [patientId], references: [id])
+  professional    Professional      @relation(fields: [professionalId], references: [id])
+  createdBy       User              @relation("AppointmentCreatedBy", fields: [createdByUserId], references: [id])
+  clinicalRecord  ClinicalRecord?
+  payments        Payment[]
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([workspaceId, professionalId, startsAt])
+  @@index([workspaceId, patientId, startsAt])
+  @@index([workspaceId, startsAt])
+  @@index([workspaceId, financialStatus, startsAt])
+  @@map("appointments")
+}
+
+model ClinicalRecord {
+  id                  String       @id @default(cuid())
+  workspaceId         String       @map("workspace_id")
+  appointmentId       String       @unique @map("appointment_id")
+  patientId           String       @map("patient_id")
+  professionalId      String       @map("professional_id")
+  templateId          String?      @map("template_id")
+  complaint           String?
+  notes               String?
+  conduct             String?
+  data                Json?
+  recommendedReturnAt DateTime?    @map("recommended_return_at")
+  createdByUserId     String       @map("created_by_user_id")
+  updatedByUserId     String?      @map("updated_by_user_id")
+  workspace           Workspace        @relation(fields: [workspaceId], references: [id])
+  appointment         Appointment      @relation(fields: [appointmentId], references: [id])
+  patient             Patient          @relation(fields: [patientId], references: [id])
+  professional        Professional     @relation(fields: [professionalId], references: [id])
+  template            ClinicalTemplate? @relation(fields: [templateId], references: [id])
+  createdBy           User             @relation("RecordCreatedBy", fields: [createdByUserId], references: [id])
+  updatedBy           User?            @relation("RecordUpdatedBy", fields: [updatedByUserId], references: [id])
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  @@index([workspaceId, patientId])
+  @@index([workspaceId, patientId, createdAt])
+  @@map("clinical_records")
+}
+
+model ClinicalTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  segment     String   // PSYCHOLOGY | NUTRITION | DENTAL
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fields    ClinicalTemplateField[]
+  records   ClinicalRecord[]
+
+  @@unique([workspaceId, name])
+  @@map("clinical_templates")
+}
+
+model ClinicalTemplateField {
+  id          String  @id @default(cuid())
+  templateId  String  @map("template_id")
+  label       String
+  key         String
+  fieldType   String  // TEXT | TEXTAREA | SELECT | NUMBER | DATE
+  required    Boolean @default(false)
+  order       Int     @default(0)
+  options     String? // JSON array for SELECT type
+  placeholder String?
+
+  template ClinicalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, key])
+  @@map("clinical_template_fields")
+}
+
+model Payment {
+  id              String       @id @default(cuid())
+  workspaceId     String       @map("workspace_id")
+  appointmentId   String       @map("appointment_id")
+  patientId       String       @map("patient_id")
+  amount          Decimal      @db.Decimal(10, 2)
+  method          PaymentMethod
+  status          EntryStatus  @default(PENDING)
+  paidAt          DateTime?    @map("paid_at")
+  notes           String?
+  createdByUserId String       @map("created_by_user_id")
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
+  appointment     Appointment  @relation(fields: [appointmentId], references: [id])
+  patient         Patient      @relation(fields: [patientId], references: [id])
+  createdBy       User         @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  @@index([workspaceId, paidAt, status])
+  @@index([workspaceId, status, paidAt])
+  @@index([workspaceId, patientId, status])
+  @@index([workspaceId, appointmentId, status])
+  @@map("payments")
+}
+
+model Expense {
+  id              String      @id @default(cuid())
+  workspaceId     String      @map("workspace_id")
+  description     String
+  category        String
+  amount          Decimal     @db.Decimal(10, 2)
+  status          EntryStatus @default(PENDING)
+  expenseDate     DateTime    @map("expense_date") @db.Date
+  notes           String?
+  createdByUserId String      @map("created_by_user_id")
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id])
+  createdBy       User        @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@index([workspaceId, expenseDate, status])
+  @@map("expenses")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  workspaceId  String   @map("workspace_id")
+  userId       String   @map("user_id")
+  entityName   String   @map("entity_name")
+  entityId     String   @map("entity_id")
+  action       String
+  metadataJson Json?    @map("metadata_json")
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, entityName, entityId])
+  @@map("audit_logs")
+}
+
+model PlatformInvoice {
+  id                 String           @id @default(cuid())
+  workspaceId        String           @map("workspace_id")
+  amount             Decimal          @db.Decimal(10, 2)
+  status             InvoiceStatus    @default(PENDING)
+  dueDate            DateTime         @map("due_date")
+  paidAt             DateTime?        @map("paid_at")
+  mercadoPagoPaymentId String?        @map("mercado_pago_payment_id")
+  description        String?
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id])
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, dueDate])
+  @@map("platform_invoices")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  APPOINTMENT_CANCELLED
+  PAYMENT_RECEIVED
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  BOTH
+}
+
+model Notification {
+  id          String             @id @default(cuid())
+  workspaceId String             @map("workspace_id")
+  userId      String?            @map("user_id")
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String
+  message     String
+  link        String?
+  readAt      DateTime?          @map("read_at")
+  sentAt      DateTime?          @map("sent_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, userId, readAt])
+  @@index([workspaceId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id            String             @id @default(cuid())
+  userId        String             @map("user_id")
+  channel       NotificationChannel @default(BOTH)
+  appointmentReminder Boolean      @default(true) @map("appointment_reminder")
+  appointmentCancelled  Boolean    @default(true) @map("appointment_cancelled")
+  paymentReceived       Boolean    @default(true) @map("payment_received")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("notification_preferences")
+}
+
+model WorkspaceReminderConfig {
+  id              String   @id @default(cuid())
+  workspaceId     String   @unique @map("workspace_id")
+
+  remind24hBefore  Boolean @default(true) @map("remind_24h_before")
+  remind1hBefore   Boolean @default(false) @map("remind_1h_before")
+  remind30minBefore Boolean @default(false) @map("remind_30min_before")
+
+  notifyProfessional Boolean @default(true) @map("notify_professional")
+  notifyPatient      Boolean @default(true) @map("notify_patient")
+
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_reminder_configs")
+}

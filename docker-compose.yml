@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nuvix
+      POSTGRES_PASSWORD: nuvix_secret
+      POSTGRES_DB: nuvix
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nuvix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://nuvix:nuvix_secret@postgres:5432/nuvix"
+      AUTH_SECRET: "change-me-to-a-random-secret"
+      RESEND_API_KEY: ""
+      FROM_EMAIL: "noreply@nuvix.com.br"
+      MERCADO_PAGO_ACCESS_TOKEN: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    entrypoint: |
+      sh -c '
+        echo "0 3 * * * pg_dump --host=postgres --port=5432 --username=nuvix --dbname=nuvix --no-owner --no-acl --format=custom --compress=9 --file=/backups/nuvix_$$(date +\\%Y-\\%m-\\%d_\\%H\\%M\\%S).sql.gz" > /etc/crontabs/root
+        pg_dump --host=postgres --port=5432 --username=nuvix --dbname=nuvix --no-owner --no-acl --format=custom --compress=9 --file=/backups/nuvix_initial.sql.gz
+        crond -f
+      '
+    environment:
+      PGPASSWORD: nuvix_secret
+    volumes:
+      - postgres_backups:/backups
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  postgres_backups:
