@@ -337,7 +337,6 @@ input[type="color"] {
 .detail-panel,
 .finance-table,
 .module,
-.admin-company-card,
 .empty-state {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -2658,54 +2657,26 @@ a.finance-row:hover {
   min-height: 100vh;
 }
 
-.admin-shell.nuvix-surface {
-  --app-bg: var(--bg);
-  --app-text: var(--fg);
-  --app-muted: var(--muted);
-  --app-border: var(--border);
-  --app-surface: var(--surface);
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  background: var(--bg);
-  color: var(--fg);
+.admin-shell .sidebar-footer .button.secondary {
+  border-color: var(--app-border);
+  background: transparent;
+  color: var(--app-text);
+}
+
+.admin-shell .sidebar-footer .button.secondary:hover {
+  background: var(--overlay);
 }
 
 .admin-shell .app-sidebar .nuvix-logo {
   width: 100px;
 }
 
-.admin-shell .content-shell {
-  padding: 24px;
-}
-
-.admin-list {
-  display: grid;
-  gap: 12px;
-}
-
-.admin-company-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: start;
+.admin-shell .detail-card {
   padding: 16px;
 }
 
-.admin-company-main {
-  display: grid;
-  gap: 10px;
-}
-
-.admin-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.admin-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.admin-shell .admin-empty-action {
+  justify-self: end;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3040,9 +3011,7 @@ a.finance-row:hover {
   .finance-breakdown,
   .detail-summary-grid,
   .detail-grid,
-  .settings-grid,
-  .admin-metrics,
-  .admin-meta {
+  .settings-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3054,8 +3023,7 @@ a.finance-row:hover {
   .two-columns,
   .patient-card,
   .agenda-card,
-  .user-card,
-  .admin-company-card {
+  .user-card {
     grid-template-columns: 1fr;
   }
 

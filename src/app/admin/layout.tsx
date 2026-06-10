@@ -6,22 +6,25 @@ import { requirePlatformAdmin } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 const navItems = [
-  { href: "/admin", label: "Empresas" },
-  { href: "/admin/financeiro", label: "Financeiro" }
+  { href: "/admin", label: "Empresas", icon: "⏹" },
+  { href: "/admin/financeiro", label: "Financeiro", icon: "💰" }
 ];
 
 export default async function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await requirePlatformAdmin();
 
   return (
-    <div className="admin-shell nuvix-surface">
+    <div className="app-shell admin-shell nuvix-surface">
       <aside className="app-sidebar">
         <Link className="brand-mark logo-brand" href="/admin">
           <Image className="nuvix-logo" src="/brand/nuvix-logo.png" alt="Nuvix" width={120} height={38} priority />
         </Link>
         <nav className="app-nav">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>{item.label}</Link>
+            <Link key={item.href} href={item.href}>
+              <span className="nav-icon">{item.icon}</span>
+              {item.label}
+            </Link>
           ))}
         </nav>
         <div className="sidebar-footer">

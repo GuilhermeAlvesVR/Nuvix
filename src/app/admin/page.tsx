@@ -59,81 +59,81 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
     {} as Record<string, number>
   );
 
+  const fm = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
   return (
     <main className="content-shell">
       <section className="page-header">
         <div>
+          <span className="eyebrow">Plataforma</span>
           <h1>Administração</h1>
-          <p>Gerencie empresas, usuários e faturamento da plataforma.</p>
+          <p>Gerencie empresas, usuários e faturamento.</p>
         </div>
       </section>
 
-      {params.saved ? <div className="success-message">{savedMessages[params.saved] ?? "Alteração salva."}</div> : null}
-      {params.error ? <div className="error-message">Erro ao executar ação.</div> : null}
+      {params.saved ? <div className="gc-toast success">{savedMessages[params.saved] ?? "Alteração salva."}</div> : null}
+      {params.error ? <div className="gc-toast error">Erro ao executar ação.</div> : null}
 
-      <section className="dashboard-metrics" aria-label="Indicadores da plataforma">
-        <article className="metric"><strong>{totalWorkspaces}</strong><span>Empresas</span></article>
-        <article className="metric"><strong>{totalUsers}</strong><span>Usuários</span></article>
-        <article className="metric"><strong>{totalPatients}</strong><span>Pacientes</span></article>
-        <article className="metric"><strong>{totalAppointments}</strong><span>Consultas</span></article>
-        <article className="metric"><strong>{formatMoney(Number(totalRevenue._sum.amount ?? 0))}</strong><span>Receita confirmada</span></article>
+      <section className="detail-summary-grid" aria-label="Indicadores da plataforma">
+        <article className="detail-panel"><span>Empresas</span><strong>{totalWorkspaces}</strong></article>
+        <article className="detail-panel"><span>Usuários</span><strong>{totalUsers}</strong></article>
+        <article className="detail-panel"><span>Pacientes</span><strong>{totalPatients}</strong></article>
+        <article className="detail-panel"><span>Consultas</span><strong>{totalAppointments}</strong></article>
+        <article className="detail-panel"><span>Receita</span><strong>{fm(Number(totalRevenue._sum.amount ?? 0))}</strong></article>
       </section>
 
-      <section className="finance-metrics" aria-label="Status das empresas">
+      <section className="detail-grid" aria-label="Status das empresas">
         {(Object.keys(statusLabels) as WorkspaceStatus[]).map((status) => (
-          <article className="metric" key={status}>
-            <strong>{counts[status] || 0}</strong>
-            <span>{statusLabels[status]}</span>
+          <article className="detail-card" key={status}>
+            <h2>{statusLabels[status]}</h2>
+            <strong className="detail-card-value">{counts[status] || 0}</strong>
           </article>
         ))}
       </section>
 
-      <section className="admin-list" aria-label="Lista de empresas">
-        {workspaces.length > 0 ? workspaces.map((workspace) => (
-          <article className="admin-company-card" key={workspace.id}>
-            <div className="admin-company-main">
-              <div className="patient-title-row">
-                <h2>{workspace.name}</h2>
-                <span className={`badge status-${workspace.status.toLowerCase().replace("_", "-")}`}>{statusLabels[workspace.status]}</span>
+      <section className="section-divider first-section"><h2>Empresas</h2></section>
+
+      {workspaces.length > 0 ? (
+        <div className="finance-table">
+          {workspaces.map((workspace) => (
+            <div className="finance-row" key={workspace.id}>
+              <div className="finance-main-cell">
+                <strong>{workspace.name}</strong>
+                <span>{workspace.slug} · {workspace.type}{workspace.billingDay ? ` · Fatura dia ${workspace.billingDay}` : ""}</span>
               </div>
-              <p className="muted-text">{workspace.slug} · {workspace.type}{workspace.billingDay ? ` · Fatura dia ${workspace.billingDay}` : ""}</p>
-              <dl className="patient-meta" style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                <div><dt>Responsável</dt><dd>{workspace.ownerName ?? "-"}</dd></div>
-                <div><dt>Email</dt><dd>{workspace.ownerEmail ?? "-"}</dd></div>
-                <div><dt>Usuários</dt><dd>{workspace._count.users}</dd></div>
-                <div><dt>Pacientes</dt><dd>{workspace._count.patients}</dd></div>
-                <div><dt>Consultas</dt><dd>{workspace._count.appointments}</dd></div>
-              </dl>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                <span className={`badge ${workspace.status === "ACTIVE" ? "confirmed" : workspace.status === "SUSPENDED" || workspace.status === "REJECTED" ? "cancelled" : "scheduled"}`}>
+                  {statusLabels[workspace.status]}
+                </span>
+                {workspace.status === "PENDING_APPROVAL" || workspace.status === "REJECTED" || workspace.status === "SUSPENDED" ? (
+                  <form action={workspace.status === "SUSPENDED" ? reactivateWorkspace : approveWorkspace}>
+                    <input name="workspaceId" type="hidden" value={workspace.id} />
+                    <button className="button primary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Aprovar</button>
+                  </form>
+                ) : null}
+                {workspace.status === "ACTIVE" ? (
+                  <form action={suspendWorkspace}>
+                    <input name="workspaceId" type="hidden" value={workspace.id} />
+                    <button className="button secondary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Suspender</button>
+                  </form>
+                ) : null}
+                {workspace.status === "PENDING_APPROVAL" ? (
+                  <form action={rejectWorkspace}>
+                    <input name="workspaceId" type="hidden" value={workspace.id} />
+                    <button className="button secondary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Rejeitar</button>
+                  </form>
+                ) : null}
+                <DeleteWorkspaceButton workspaceName={workspace.name} workspaceId={workspace.id} />
+              </div>
             </div>
-            <div className="admin-actions">
-              {(workspace.status === "PENDING_APPROVAL" || workspace.status === "REJECTED" || workspace.status === "SUSPENDED") ? (
-                <form action={workspace.status === "SUSPENDED" ? reactivateWorkspace : approveWorkspace}>
-                  <input name="workspaceId" type="hidden" value={workspace.id} />
-                  <button className="button primary" type="submit">{workspace.status === "SUSPENDED" ? "Reativar" : "Aprovar"}</button>
-                </form>
-              ) : null}
-              {workspace.status === "PENDING_APPROVAL" ? (
-                <form action={rejectWorkspace}>
-                  <input name="workspaceId" type="hidden" value={workspace.id} />
-                  <button className="button secondary" type="submit">Rejeitar</button>
-                </form>
-              ) : null}
-              {workspace.status === "ACTIVE" ? (
-                <form action={suspendWorkspace}>
-                  <input name="workspaceId" type="hidden" value={workspace.id} />
-                  <button className="button secondary" type="submit">Suspender</button>
-                </form>
-              ) : null}
-              <DeleteWorkspaceButton workspaceName={workspace.name} workspaceId={workspace.id} />
-            </div>
-          </article>
-        )) : (
-          <div className="empty-state">
-            <h2>Nenhuma empresa cadastrada</h2>
-            <p>Quando uma empresa enviar o cadastro público, ela aparecerá aqui.</p>
-          </div>
-        )}
-      </section>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <h2>Nenhuma empresa cadastrada</h2>
+          <p>Quando uma empresa enviar o cadastro público, ela aparecerá aqui para aprovação.</p>
+        </div>
+      )}
     </main>
   );
 }
