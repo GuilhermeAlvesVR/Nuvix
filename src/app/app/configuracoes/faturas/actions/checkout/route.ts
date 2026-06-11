@@ -54,9 +54,6 @@ export async function POST(request: NextRequest) {
     ],
     external_reference: invoiceId,
     metadata: { invoice_id: invoiceId },
-    payment_methods: {
-      default_payment_method_id: "pix",
-    },
     ...(notificationUrl ? { notification_url: notificationUrl } : {}),
     back_urls: {
       success: `${request.nextUrl.origin}/app/configuracoes/faturas?success=true`,
