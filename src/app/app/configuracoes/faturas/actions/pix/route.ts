@@ -71,6 +71,10 @@ export async function POST(request: NextRequest) {
     }),
   });
 
+  if (response.status === 401 || response.status === 403) {
+    return redirectToInvoices(request, { error: "pixUnauthorized" });
+  }
+
   if (!response.ok) {
     return redirectToInvoices(request, { error: "pix" });
   }

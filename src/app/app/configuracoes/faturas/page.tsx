@@ -11,6 +11,7 @@ const feedbackMessages = {
   configuration: "Mercado Pago nao configurado. Confira as variaveis de ambiente.",
   checkout: "Nao foi possivel gerar o link de pagamento. Tente novamente em instantes.",
   pix: "Nao foi possivel gerar o PIX. Tente novamente em instantes.",
+  pixUnauthorized: "PIX direto ainda nao esta liberado na conta Mercado Pago. Use cartao/boleto ou habilite Checkout Transparente/PIX no painel do Mercado Pago.",
   invoice: "Fatura nao encontrada ou indisponivel para pagamento."
 } as const;
 
