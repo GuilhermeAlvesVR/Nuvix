@@ -1465,6 +1465,16 @@ input[type="color"] {
   min-height: 32px;
 }
 
+.invoice-status-widget .compact-row-actions {
+  display: grid;
+  justify-content: stretch;
+  gap: 8px;
+}
+
+.invoice-status-widget .compact-row-actions form {
+  width: 100%;
+}
+
 .dashboard-shortcuts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
