@@ -10,6 +10,7 @@ const feedbackMessages = {
   canceled: "Pagamento cancelado. Voce pode tentar novamente.",
   configuration: "Mercado Pago nao configurado. Confira as variaveis de ambiente.",
   checkout: "Nao foi possivel gerar o link de pagamento. Tente novamente em instantes.",
+  pix: "Nao foi possivel gerar o PIX. Tente novamente em instantes.",
   invoice: "Fatura nao encontrada ou indisponivel para pagamento."
 } as const;
 
@@ -94,10 +95,13 @@ export default async function WorkspaceInvoicesPage({ searchParams }: { searchPa
                 </div>
 {invoice.status === "PENDING" ? (
                   <div className="compact-row-actions">
-                    <form action={`/app/configuracoes/faturas/actions/checkout`} method="POST">
-                      <input type="hidden" name="amount" value={Number(invoice.amount)} />
+                    <form action="/app/configuracoes/faturas/actions/pix" method="POST">
                       <input type="hidden" name="invoiceId" value={invoice.id} />
-                      <button className="button primary" type="submit">Pagar</button>
+                      <button className="button primary" type="submit">Pagar via PIX</button>
+                    </form>
+                    <form action="/app/configuracoes/faturas/actions/checkout" method="POST">
+                      <input type="hidden" name="invoiceId" value={invoice.id} />
+                      <button className="button secondary" type="submit">Cartão/boleto</button>
                     </form>
                   </div>
                 ) : null}
