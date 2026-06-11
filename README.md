@@ -84,6 +84,98 @@ Depois acesse `http://localhost:3000`.
 - `npm run lint`: executa verificacao de lint.
 - `npm run prisma:studio`: abre o painel visual do Prisma.
 
-## Proximo Passo De Implementacao
+## Deploy Na Vercel
 
-Implementar autenticacao e o primeiro fluxo real do MVP: cadastro e busca de pacientes.
+O projeto possui `vercel.json` com crons para:
+
+- `/api/notifications/reminders`: roda a cada minuto.
+- `/api/billing/monthly-invoices`: roda no dia 1 de cada mes as 08:00 UTC.
+
+1. Configure o projeto na Vercel apontando para este repositorio.
+
+2. Configure as variaveis de ambiente na Vercel:
+
+```bash
+DATABASE_URL="postgresql://..."
+AUTH_SECRET="..."
+CRON_SECRET="..."
+MERCADO_PAGO_ACCESS_TOKEN="..."
+MERCADO_PAGO_WEBHOOK_SECRET="..."
+RESEND_API_KEY="..."
+FROM_EMAIL="noreply@seudominio.com.br"
+```
+
+`RESEND_API_KEY` e `FROM_EMAIL` sao opcionais. Sem `RESEND_API_KEY`, os lembretes continuam sendo registrados no sistema, mas email real nao e enviado.
+
+Use valores fortes e fixos para `AUTH_SECRET`, `CRON_SECRET` e `MERCADO_PAGO_WEBHOOK_SECRET`. Nao gere esses valores novamente depois do deploy, porque isso pode invalidar sessoes ou chamadas externas.
+
+3. Faça o deploy pela Vercel.
+
+4. Garanta que o banco de producao esta com o schema atualizado. Em ambientes novos, aplique as migracoes/scripts necessarios antes de liberar uso:
+
+```bash
+npm run migrate:saas-approval
+npm run migrate:performance
+npm run migrate:patient-notes
+npm run migrate:patient-notes-updated-by
+npm run migrate:workspace-types
+npm run migrate:workspace-background
+npm run migrate:notification-reminder-key
+```
+
+Depois rode os seeds necessarios:
+
+```bash
+PLATFORM_ADMIN_EMAIL="admin@seudominio.com" PLATFORM_ADMIN_PASSWORD="senha-forte" npm run seed:platform-admin
+npm run seed:templates
+```
+
+5. Configure o webhook do Mercado Pago para o dominio de producao:
+
+```text
+https://seu-dominio.vercel.app/api/mercado-pago/webhook?secret=SEU_MERCADO_PAGO_WEBHOOK_SECRET
+```
+
+No Mercado Pago, use credencial `TEST-...` apenas para sandbox e `APP_USR-...` para producao. Para teste real, crie uma fatura pequena e pague com uma conta/cartao diferente da conta vendedora.
+
+6. Para testar os crons manualmente:
+
+```bash
+curl -X GET https://seu-dominio.vercel.app/api/notifications/reminders -H "Authorization: Bearer SEU_CRON_SECRET"
+curl -X GET https://seu-dominio.vercel.app/api/billing/monthly-invoices -H "Authorization: Bearer SEU_CRON_SECRET"
+```
+
+Na Vercel, quando `CRON_SECRET` esta configurado, os Vercel Crons enviam automaticamente o header `Authorization: Bearer <CRON_SECRET>`. Se usar outro provedor de cron, envie esse header manualmente ou `x-cron-secret`.
+
+7. Checklist antes de liberar producao:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+8. Checklist funcional depois do deploy:
+
+- Login com admin da plataforma.
+- Aprovar uma empresa cadastrada.
+- Login com admin da empresa aprovada.
+- Criar paciente, profissional e atendimento.
+- Registrar pagamento e despesa.
+- Gerar fatura SaaS pelo cron ou admin.
+- Clicar em `Pagar` e concluir pagamento Mercado Pago.
+- Confirmar que a fatura muda para `PAID` e salva `paidAt` e `mercadoPagoPaymentId`.
+- Confirmar que `/api/notifications/reminders` responde `401` sem segredo e `200` com segredo correto.
+- Confirmar que `/api/billing/monthly-invoices` responde `401` sem segredo e `200` com segredo correto.
+
+## Proximos Passos
+
+O MVP ja possui os fluxos principais implementados. As proximas frentes sao:
+
+- Configurar variaveis reais de producao, incluindo `AUTH_SECRET`, `CRON_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET`.
+- Subir o projeto em uma URL publica e validar os crons externos.
+- Testar o Mercado Pago em fluxo real ou sandbox completo, confirmando baixa automatica de faturas.
+- Ampliar testes automatizados para permissoes, financeiro, atendimento clinico, cadastro com profissional e importacao CSV.
+- Evoluir LGPD, relatorios e acabamento comercial do admin SaaS.
+
+Consulte `oqfalta.txt` para a lista priorizada de pendencias.

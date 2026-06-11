@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { generateMonthlyPlatformInvoices } from "@/lib/platform-billing";
 import { requirePlatformAdmin } from "@/lib/session";
 
 function normalizeText(value: FormDataEntryValue | null) {
@@ -39,6 +40,15 @@ export async function markInvoiceAsPaid(formData: FormData) {
   redirect("/admin/financeiro");
 }
 
+export async function cancelInvoice(formData: FormData) {
+  await requirePlatformAdmin();
+  const invoiceId = normalizeText(formData.get("invoiceId"));
+  if (!invoiceId) redirectWithError("Fatura inválida.");
+  await prisma.platformInvoice.update({ data: { status: "CANCELLED" }, where: { id: invoiceId } });
+  revalidatePath("/admin/financeiro");
+  redirect("/admin/financeiro");
+}
+
 export async function setBillingDay(formData: FormData) {
   await requirePlatformAdmin();
   const workspaceId = normalizeText(formData.get("workspaceId"));
@@ -53,31 +63,7 @@ export async function setBillingDay(formData: FormData) {
 
 export async function generateMonthlyInvoices() {
   await requirePlatformAdmin();
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const existingInvoices = await prisma.platformInvoice.findMany({
-    select: { workspaceId: true },
-    where: { dueDate: { gte: firstDay, lte: lastDay } }
-  });
-  const existingWorkspaceIds = new Set(existingInvoices.map((i) => i.workspaceId));
-  const workspaces = await prisma.workspace.findMany({
-    select: { id: true, billingDay: true, plan: true },
-    where: { status: "ACTIVE", billingDay: { not: null } }
-  });
-  let created = 0;
-  for (const ws of workspaces) {
-    if (!existingWorkspaceIds.has(ws.id) && ws.billingDay) {
-      const dueDate = new Date(year, month, Math.min(ws.billingDay, lastDay.getDate()));
-      const amount = ws.plan === "PRO" ? 49.90 : 29.90;
-      await prisma.platformInvoice.create({
-        data: { workspaceId: ws.id, amount, dueDate, description: `Mensalidade ${firstDay.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`, status: "PENDING" }
-      });
-      created++;
-    }
-  }
+  const { created } = await generateMonthlyPlatformInvoices();
   revalidatePath("/admin/financeiro");
   redirect(`/admin/financeiro?created=${created}`);
 }

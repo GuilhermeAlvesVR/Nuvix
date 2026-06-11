@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
 import { archivePatientNote, createPatientNote, setPatientActive, updatePatient, updatePatientNote } from "../actions";
+import { PatientExportButton } from "@/components/patient-export-button";
 
 type PageParams = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string; noteArchived?: string; noteCreated?: string; noteUpdated?: string; notes?: string; saved?: string }>;
@@ -205,13 +206,18 @@ export default async function PatientDetailPage({ params, searchParams }: { para
         <div className="page-actions">
           <Link className="button secondary" href="/app/pacientes">Voltar</Link>
           {canManagePatient ? (
-            <form action={setPatientActive}>
-              <input name="patientId" type="hidden" value={patient.id} />
-              <input name="active" type="hidden" value={patient.active ? "false" : "true"} />
-              <button className="button secondary" type="submit">
-                {patient.active ? "Inativar" : "Reativar"}
-              </button>
-            </form>
+            <>
+              <form action={setPatientActive} style={{ display: "inline" }}>
+                <input name="patientId" type="hidden" value={patient.id} />
+                <input name="active" type="hidden" value={patient.active ? "false" : "true"} />
+                <button className="button secondary" type="submit">
+                  {patient.active ? "Inativar" : "Reativar"}
+                </button>
+              </form>
+              {currentUser.role === "ADMIN" || currentUser.role === "RECEPTIONIST" ? (
+                <PatientExportButton patientId={patient.id} patientName={patient.name} />
+              ) : null}
+            </>
           ) : null}
           <Link className="button primary" href={`/app/agenda/novo?patientId=${id}`}>Agendar</Link>
         </div>

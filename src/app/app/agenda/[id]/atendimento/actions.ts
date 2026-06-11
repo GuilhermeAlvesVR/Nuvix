@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { invalidateAgendaData } from "@/lib/app-cache";
+import { canAccessClinicalRecord } from "@/lib/authorization";
+import { canSaveClinicalRecordForStatus, getClinicalRecordAuditAction } from "@/lib/clinical";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
@@ -63,15 +65,11 @@ export async function saveClinicalRecord(formData: FormData) {
     redirect("/app/agenda?error=Atendimento não encontrado.");
   }
 
-  if (currentUser.role === "RECEPTIONIST") {
-    redirectWithError(appointment.id, "Apenas profissionais e administradores podem registrar atendimentos.");
-  }
-
-  if (currentUser.role === "PROFESSIONAL" && appointment.professional.userId !== currentUser.id) {
+  if (!canAccessClinicalRecord(currentUser.role, appointment.professional.userId, currentUser.id)) {
     redirectWithError(appointment.id, "Apenas o profissional vinculado a este atendimento pode criar ou editar o registro.");
   }
 
-  if (appointment.status !== "IN_PROGRESS" && appointment.status !== "COMPLETED") {
+  if (!canSaveClinicalRecordForStatus(appointment.status)) {
     redirectWithError(appointment.id, "O atendimento só pode ser registrado quando o status estiver Em atendimento ou Realizado.");
   }
 
@@ -79,7 +77,7 @@ export async function saveClinicalRecord(formData: FormData) {
     redirectWithError(appointment.id, `Informe ao menos uma informação para o ${labels.record.toLowerCase()}.`);
   }
 
-  const action = appointment.clinicalRecord ? "UPDATE_CLINICAL_RECORD" : "CREATE_CLINICAL_RECORD";
+  const action = getClinicalRecordAuditAction(Boolean(appointment.clinicalRecord));
 
   // Parse template data from formData
   let data: Record<string, string> | null = null;

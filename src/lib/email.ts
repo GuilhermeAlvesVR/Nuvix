@@ -9,7 +9,6 @@ export type EmailPayload = {
 
 export async function sendEmail(payload: EmailPayload) {
   if (!RESEND_API_KEY) {
-    console.log(`[email] Would send email to ${payload.to}: ${payload.subject}`);
     return { ok: true, mock: true };
   }
 
@@ -28,9 +27,8 @@ export async function sendEmail(payload: EmailPayload) {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error("[email] Failed to send:", error);
-    return { ok: false, error };
+    console.error("[email] Failed to send — status:", response.status);
+    return { ok: false, error: "Erro ao enviar email." };
   }
 
   return { ok: true };

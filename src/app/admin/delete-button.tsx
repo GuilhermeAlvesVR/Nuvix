@@ -11,8 +11,7 @@ export function DeleteWorkspaceButton({ workspaceName, workspaceId }: {
       if (!confirm(`Excluir "${workspaceName}" permanentemente? Todos os dados serão perdidos.`)) e.preventDefault();
     }}>
       <input name="workspaceId" type="hidden" value={workspaceId} />
-      <button className="button secondary" type="submit"
-        style={{ fontSize: "12px", padding: "4px 10px", color: "var(--danger-fg, #e00)", borderColor: "var(--danger-bg, #fdd)" }}>
+      <button className="button secondary" type="submit" style={{ color: "var(--danger-fg, #e00)", borderColor: "var(--danger-bg, #fdd)" }}>
         Excluir
       </button>
     </form>

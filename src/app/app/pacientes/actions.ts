@@ -525,3 +525,115 @@ export async function updatePatientNote(formData: FormData) {
 
   redirect(`${detailPath}?noteUpdated=1#patient-note-${updatedNote.id}`);
 }
+
+export async function exportPatientData(patientId: string) {
+  const user = await requireCompanyUser();
+  const labels = getWorkspaceLabels(user.workspace);
+
+  const patient = await prisma.patient.findFirst({
+    where: { id: patientId, workspaceId: user.workspaceId },
+    select: {
+      id: true, name: true, birthDate: true, document: true,
+      phone: true, email: true, address: true, active: true,
+      createdAt: true, updatedAt: true,
+      appointments: {
+        select: {
+          id: true, startsAt: true, endsAt: true, status: true, type: true,
+          price: true, financialStatus: true,
+          professional: { select: { name: true } },
+          payments: {
+            select: { amount: true, method: true, status: true, paidAt: true }
+          }
+        },
+        orderBy: { startsAt: "desc" }
+      },
+      clinicalRecords: {
+        select: {
+          id: true, createdAt: true, updatedAt: true,
+          createdBy: { select: { name: true } },
+          updatedBy: { select: { name: true } }
+        },
+        orderBy: { createdAt: "desc" }
+      },
+      patientNotes: {
+        select: {
+          id: true, content: true, category: true, important: true,
+          createdAt: true, archivedAt: true,
+          createdBy: { select: { name: true } }
+        },
+        orderBy: { createdAt: "desc" }
+      },
+      payments: {
+        select: {
+          id: true, amount: true, method: true, status: true, paidAt: true,
+          appointment: { select: { startsAt: true, professional: { select: { name: true } } } }
+        },
+        orderBy: { paidAt: "desc" }
+      }
+    }
+  });
+
+  if (!patient) {
+    redirect(`/app/pacientes/${patientId}?error=Paciente+não+encontrado.`);
+  }
+
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    exportedBy: user.name,
+    patient: {
+      id: patient.id,
+      name: patient.name,
+      birthDate: patient.birthDate?.toISOString().slice(0, 10) ?? null,
+      document: patient.document,
+      phone: patient.phone,
+      email: patient.email,
+      address: patient.address,
+      active: patient.active,
+      registeredAt: patient.createdAt.toISOString(),
+      updatedAt: patient.updatedAt.toISOString(),
+      appointments: patient.appointments.map((a) => ({
+        date: a.startsAt.toISOString(),
+        professional: a.professional.name,
+        status: a.status,
+        type: a.type,
+        price: Number(a.price),
+        financialStatus: a.financialStatus,
+        payments: a.payments.map((p) => ({
+          amount: Number(p.amount),
+          method: p.method,
+          status: p.status,
+          paidAt: p.paidAt?.toISOString() ?? null,
+        })),
+      })),
+      clinicalRecords: patient.clinicalRecords.map((r) => ({
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy.name,
+        updatedBy: r.updatedBy?.name ?? null,
+      })),
+      notes: patient.patientNotes.map((n) => ({
+        content: n.content,
+        category: n.category,
+        important: n.important,
+        createdAt: n.createdAt.toISOString(),
+        archivedAt: n.archivedAt?.toISOString() ?? null,
+        createdBy: n.createdBy.name,
+      })),
+      payments: patient.payments.map((p) => ({
+        amount: Number(p.amount),
+        method: p.method,
+        status: p.status,
+        paidAt: p.paidAt?.toISOString() ?? null,
+        appointment: {
+          date: p.appointment.startsAt.toISOString(),
+          professional: p.appointment.professional.name,
+        },
+      })),
+    },
+  };
+
+  const json = JSON.stringify(exportData, null, 2);
+  const base64 = Buffer.from(json).toString("base64");
+
+  return base64;
+}

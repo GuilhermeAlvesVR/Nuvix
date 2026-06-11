@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { canAccessClinicalRecord } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
@@ -131,8 +132,7 @@ export default async function ClinicalAttendancePage({ params, searchParams }: {
     notFound();
   }
 
-  const isLinkedProfessional = appointment.professional.userId === currentUser.id;
-  const canViewClinical = (currentUser.role === "ADMIN" || currentUser.role === "PROFESSIONAL") && isLinkedProfessional;
+  const canViewClinical = canAccessClinicalRecord(currentUser.role, appointment.professional.userId, currentUser.id);
   const canEditClinical = canViewClinical;
   const canUseForm = canEditClinical && (appointment.status === "IN_PROGRESS" || appointment.status === "COMPLETED");
 

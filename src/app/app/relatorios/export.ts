@@ -54,7 +54,7 @@ export async function exportAppointmentsCSV(formData: FormData) {
       status: true,
       price: true,
       financialStatus: true,
-      patient: { select: { name: true, document: true, phone: true } },
+      patient: { select: { name: true } },
       professional: { select: { name: true } },
       payments: { select: { amount: true, status: true } },
     },
@@ -67,14 +67,12 @@ export async function exportAppointmentsCSV(formData: FormData) {
     take: 2000,
   });
 
-  const headers = ["Data", "Paciente", "Documento", "Telefone", "Profissional", "Status", "Valor", "Status Financeiro", "Total Recebido"];
+  const headers = ["Data", "Paciente", "Profissional", "Status", "Valor", "Status Financeiro", "Total Recebido"];
   const rows = appointments.map((a) => {
     const paid = a.payments.filter((p) => p.status === "CONFIRMED").reduce((s, p) => s + Number(p.amount), 0);
     return [
       fmtDateTime(a.startsAt),
       a.patient.name,
-      a.patient.document ?? "",
-      a.patient.phone ?? "",
       a.professional.name,
       a.status,
       fmtMoney(a.price),
@@ -101,7 +99,7 @@ export async function exportPaymentsCSV(formData: FormData) {
       paidAt: true,
       method: true,
       status: true,
-      patient: { select: { name: true, document: true } },
+      patient: { select: { name: true } },
       appointment: { select: { startsAt: true, professional: { select: { name: true } } } },
     },
     where: {
@@ -111,11 +109,10 @@ export async function exportPaymentsCSV(formData: FormData) {
     take: 2000,
   });
 
-  const headers = ["Data", "Paciente", "Documento", "Profissional", "Valor", "Método", "Status"];
+  const headers = ["Data", "Paciente", "Profissional", "Valor", "Método", "Status"];
   const rows = payments.map((p) => [
     fmtDate(p.paidAt),
     p.patient.name,
-    p.patient.document ?? "",
     p.appointment.professional.name,
     fmtMoney(p.amount),
     p.method ?? "",

@@ -2,8 +2,30 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 
-export default async function WorkspaceInvoicesPage() {
+type SearchParams = Promise<{ canceled?: string; error?: string; pending?: string; success?: string }>;
+
+const feedbackMessages = {
+  success: "Pagamento aprovado. A baixa sera confirmada automaticamente pelo Mercado Pago.",
+  pending: "Pagamento pendente. A fatura sera atualizada quando o Mercado Pago confirmar.",
+  canceled: "Pagamento cancelado. Voce pode tentar novamente.",
+  configuration: "Mercado Pago nao configurado. Confira as variaveis de ambiente.",
+  checkout: "Nao foi possivel gerar o link de pagamento. Tente novamente em instantes.",
+  invoice: "Fatura nao encontrada ou indisponivel para pagamento."
+} as const;
+
+export default async function WorkspaceInvoicesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireCompanyUser();
+  const params = await searchParams;
+  const feedback = params.error
+    ? feedbackMessages[params.error as keyof typeof feedbackMessages] ?? feedbackMessages.checkout
+    : params.success
+      ? feedbackMessages.success
+      : params.pending
+        ? feedbackMessages.pending
+        : params.canceled
+          ? feedbackMessages.canceled
+          : null;
+  const feedbackClass = params.error || params.canceled ? "error-message" : "success-message";
 
   const invoices = await prisma.platformInvoice.findMany({
     orderBy: { createdAt: "desc" },
@@ -49,6 +71,7 @@ export default async function WorkspaceInvoicesPage() {
         <div className="section-divider first-section">
           <h2>Histórico</h2>
         </div>
+        {feedback ? <div className={feedbackClass}>{feedback}</div> : null}
         {invoices.length === 0 ? (
           <div className="empty-state">
             <h2>Nenhuma fatura</h2>
@@ -74,7 +97,7 @@ export default async function WorkspaceInvoicesPage() {
                     <form action={`/app/configuracoes/faturas/actions/checkout`} method="POST">
                       <input type="hidden" name="amount" value={Number(invoice.amount)} />
                       <input type="hidden" name="invoiceId" value={invoice.id} />
-                      <button className="button primary" type="submit">Pagar via PIX</button>
+                      <button className="button primary" type="submit">Pagar</button>
                     </form>
                   </div>
                 ) : null}

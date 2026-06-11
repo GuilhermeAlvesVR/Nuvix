@@ -4,6 +4,8 @@ import { EntryStatus, PaymentMethod } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { invalidateAgendaData, invalidateFinanceData } from "@/lib/app-cache";
+import { canManageExpenses, canRegisterPayments } from "@/lib/authorization";
+import { calculateAppointmentFinancialStatus } from "@/lib/finance";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
@@ -61,7 +63,7 @@ export async function createPayment(formData: FormData) {
   const labels = getWorkspaceLabels(currentUser.workspace);
   const returnTo = normalizeText(formData.get("returnTo"));
 
-  if (currentUser.role !== "ADMIN" && currentUser.role !== "RECEPTIONIST") {
+  if (!canRegisterPayments(currentUser.role)) {
     redirectWithError("Apenas administradores e recepcionistas podem registrar pagamentos.", "/app/financeiro/pagamentos/novo");
   }
 
@@ -153,9 +155,10 @@ export async function createPayment(formData: FormData) {
       }
     });
 
-    const confirmedTotal = Number(confirmedPayments._sum.amount ?? 0);
-    const appointmentPrice = Number(appointment.price);
-    const financialStatus = confirmedTotal <= 0 ? "PENDING" : confirmedTotal < appointmentPrice ? "PARTIAL" : "PAID";
+    const financialStatus = calculateAppointmentFinancialStatus(
+      Number(confirmedPayments._sum.amount ?? 0),
+      Number(appointment.price)
+    );
 
     await tx.appointment.update({
       data: { financialStatus },
@@ -192,9 +195,10 @@ async function recalculateAppointmentFinancialStatus(appointmentId: string, work
 
   if (!appointment) return;
 
-  const confirmedTotal = Number(payments._sum.amount ?? 0);
-  const appointmentPrice = Number(appointment.price);
-  const financialStatus = confirmedTotal <= 0 ? "PENDING" : confirmedTotal < appointmentPrice ? "PARTIAL" : "PAID";
+  const financialStatus = calculateAppointmentFinancialStatus(
+    Number(payments._sum.amount ?? 0),
+    Number(appointment.price)
+  );
 
   await prisma.appointment.update({
     data: { financialStatus },
@@ -205,7 +209,7 @@ async function recalculateAppointmentFinancialStatus(appointmentId: string, work
 export async function updatePaymentStatus(formData: FormData) {
   const currentUser = await requireCompanyUser();
 
-  if (currentUser.role !== "ADMIN" && currentUser.role !== "RECEPTIONIST") {
+  if (!canRegisterPayments(currentUser.role)) {
     redirectWithError("Apenas administradores e recepcionistas podem alterar pagamentos.");
   }
 
@@ -258,7 +262,7 @@ export async function updatePaymentStatus(formData: FormData) {
 export async function createExpense(formData: FormData) {
   const currentUser = await requireCompanyUser();
 
-  if (currentUser.role !== "ADMIN") {
+  if (!canManageExpenses(currentUser.role)) {
     redirectWithError("Apenas administradores podem registrar despesas.", "/app/financeiro/despesas/nova");
   }
 
@@ -324,7 +328,7 @@ export async function createExpense(formData: FormData) {
 export async function updateExpenseStatus(formData: FormData) {
   const currentUser = await requireCompanyUser();
 
-  if (currentUser.role !== "ADMIN") {
+  if (!canManageExpenses(currentUser.role)) {
     redirectWithError("Apenas administradores podem alterar despesas.");
   }
 

@@ -6,9 +6,14 @@ function notifTag(userId: string) {
   return `notifications-${userId}`;
 }
 
+export function buildAppointmentReminderKey(appointmentId: string, windowKey: string, target: "patient" | `professional:${string}`) {
+  return `appointment:${appointmentId}:${windowKey}:${target}`;
+}
+
 type CreateNotificationInput = {
   workspaceId: string;
   userId?: string;
+  reminderKey?: string;
   type: NotificationType;
   channel?: NotificationChannel;
   title: string;
@@ -21,6 +26,7 @@ export async function createNotification(input: CreateNotificationInput) {
     data: {
       workspaceId: input.workspaceId,
       userId: input.userId ?? null,
+      reminderKey: input.reminderKey ?? null,
       type: input.type,
       channel: input.channel ?? "IN_APP",
       title: input.title,

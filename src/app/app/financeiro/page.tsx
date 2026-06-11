@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getFinanceData } from "@/lib/app-cache";
+import { canManageExpenses, canRegisterPayments } from "@/lib/authorization";
+import { sumConfirmedEntries } from "@/lib/finance";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
 
@@ -85,8 +87,8 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
     );
   }
 
-  const canRegisterPayment = currentUser.role === "ADMIN" || currentUser.role === "RECEPTIONIST";
-  const canRegisterExpense = currentUser.role === "ADMIN";
+  const canRegisterPayment = canRegisterPayments(currentUser.role);
+  const canRegisterExpense = canManageExpenses(currentUser.role);
   const selectedPatientId = params.patientId?.trim() || "";
 
   const [appointments, payments, confirmedPayments, patients, expenses] = await getFinanceData(currentUser.workspaceId, params.from ?? "", params.to ?? "", selectedPatientId);
@@ -96,7 +98,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
     const paid = appointment.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
     return total + Math.max(Number(appointment.price) - paid, 0);
   }, 0);
-  const confirmedExpensesTotal = expenses.filter((expense) => expense.status === "CONFIRMED").reduce((total, expense) => total + Number(expense.amount), 0);
+  const confirmedExpensesTotal = sumConfirmedEntries(expenses);
   const balance = confirmedTotal - confirmedExpensesTotal;
   const confirmedByDay = Array.from(
     confirmedPayments
@@ -304,10 +306,10 @@ export default async function FinancePage({ searchParams }: { searchParams: Sear
                   <strong>{expense.description}</strong>
                   <span>{expense.category} · {formatDate(expense.expenseDate)}</span>
                 </div>
-                <span className={`badge ${expense.status === "CONFIRMED" ? "confirmed" : "pending"}`}>{statusLabels[expense.status]}</span>
+                  <span className={`badge ${expense.status === "CONFIRMED" ? "confirmed" : "pending"}`}>{statusLabels[expense.status]}</span>
                 <div className="finance-amount-cell">
                   <strong>{formatMoney(expense.amount)}</strong>
-                  <span>{(expense as any).createdBy?.name ?? "—"}</span>
+                  <span>{expense.createdBy.name}</span>
                 </div>
               </Link>
             ))}

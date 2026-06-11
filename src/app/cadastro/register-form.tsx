@@ -21,6 +21,15 @@ function WorkspaceTypePreview({ type }: { type: WorkspaceType }) {
   );
 }
 
+const COLOR_PRESETS = [
+  { name: "Saúde", primary: "#116466", accent: "#d9b08c", background: "#f6f3ee" },
+  { name: "Profissional", primary: "#2563eb", accent: "#60a5fa", background: "#f0f5ff" },
+  { name: "Criativo", primary: "#7c3aed", accent: "#a78bfa", background: "#f5f3ff" },
+  { name: "Acolhedor", primary: "#be123c", accent: "#fb7185", background: "#fff1f2" },
+  { name: "Energia", primary: "#ea580c", accent: "#fb923c", background: "#fff7ed" },
+  { name: "Elegante", primary: "#1e293b", accent: "#94a3b8", background: "#f8fafc" },
+];
+
 export function RegisterWorkspaceForm({
   error,
   success,
@@ -34,6 +43,13 @@ export function RegisterWorkspaceForm({
   const [primaryColor, setPrimaryColor] = useState("#116466");
   const [accentColor, setAccentColor] = useState("#d9b08c");
   const [backgroundColor, setBackgroundColor] = useState("#f6f3ee");
+  const [alsoProfessional, setAlsoProfessional] = useState(false);
+
+  function applyPreset(preset: typeof COLOR_PRESETS[number]) {
+    setPrimaryColor(preset.primary);
+    setAccentColor(preset.accent);
+    setBackgroundColor(preset.background);
+  }
 
   return (
     <form className="form-card large-form" action={action} aria-label="Cadastro de empresa">
@@ -88,6 +104,48 @@ export function RegisterWorkspaceForm({
           <input id="password" name="password" type="password" minLength={8} placeholder="Mínimo 8 caracteres" autoComplete="new-password" required />
         </div>
 
+        <div className="field-group wide-field" style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "4px" }}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={alsoProfessional}
+            onClick={() => setAlsoProfessional(!alsoProfessional)}
+            className="toggle-switch"
+            aria-label="Também sou um profissional"
+          >
+            <span className="toggle-knob" />
+          </button>
+          <div>
+            <label style={{ fontSize: "14px", cursor: "pointer" }} onClick={() => setAlsoProfessional(!alsoProfessional)}>
+              Também sou um profissional
+            </label>
+            <p style={{ fontSize: "12px", color: "var(--muted)", margin: 0 }}>Você será cadastrado como profissional e poderá atender pacientes.</p>
+          </div>
+          <input type="hidden" name="alsoProfessional" value={alsoProfessional ? "yes" : "no"} />
+        </div>
+      </div>
+
+      <div className="section-divider" style={{ marginTop: "24px" }}><h3>Tema de cores</h3></div>
+
+      <div className="color-presets">
+        {COLOR_PRESETS.map((preset) => (
+          <button
+            key={preset.name}
+            type="button"
+            className={`color-preset-card${preset.primary === primaryColor && preset.accent === accentColor && preset.background === backgroundColor ? " active" : ""}`}
+            onClick={() => applyPreset(preset)}
+          >
+            <div className="color-preset-swatches">
+              <span className="color-swatch" style={{ background: preset.primary }} />
+              <span className="color-swatch" style={{ background: preset.accent }} />
+              <span className="color-swatch" style={{ background: preset.background }} />
+            </div>
+            <span className="color-preset-name">{preset.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="field-grid two-columns" style={{ marginTop: "12px" }}>
         <div className="field-group">
           <label htmlFor="primaryColor">Cor principal</label>
           <input id="primaryColor" name="primaryColor" type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />

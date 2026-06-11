@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createNotification } from "@/lib/notification";
+import { isSecretAuthorized } from "@/lib/cron-auth";
+import { buildAppointmentReminderKey, createNotification } from "@/lib/notification";
 import { sendEmail, buildAppointmentReminderHtml } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +19,45 @@ function getWindowRange(now: Date, ms: number): { start: Date; end: Date } {
   return { start, end };
 }
 
-export async function GET() {
+async function claimReminder(reminderKey: string, data: {
+  workspaceId: string;
+  userId?: string;
+  channel?: "IN_APP" | "EMAIL";
+  title: string;
+  message: string;
+  link?: string;
+}) {
+  const existing = await prisma.notification.findUnique({
+    select: { id: true },
+    where: { reminderKey },
+  });
+  if (existing) return false;
+
+  try {
+    await createNotification({
+      workspaceId: data.workspaceId,
+      userId: data.userId,
+      reminderKey,
+      type: "APPOINTMENT_REMINDER",
+      channel: data.channel,
+      title: data.title,
+      message: data.message,
+      link: data.link,
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  if (!isSecretAuthorized(request.headers, process.env.CRON_SECRET)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const now = new Date();
   const workspaces = await prisma.workspace.findMany({
     select: { id: true },
@@ -25,7 +65,6 @@ export async function GET() {
   });
 
   let totalSent = 0;
-  const details: string[] = [];
 
   for (const ws of workspaces) {
     const config = await prisma.workspaceReminderConfig.findUnique({
@@ -65,43 +104,53 @@ export async function GET() {
 
         // ── Notify professional ──
         if (config?.notifyProfessional !== false && apt.professional.userId) {
-          await createNotification({
+          const claimed = await claimReminder(buildAppointmentReminderKey(apt.id, window.key, `professional:${apt.professional.userId}`), {
             workspaceId: ws.id,
             userId: apt.professional.userId,
-            type: "APPOINTMENT_REMINDER",
             title: subject,
             message: `Consulta ${window.label} — ${apt.patient.name} às ${time}.`,
             link: "/app/agenda",
           });
 
-          const prefs = await prisma.notificationPreference.findUnique({
-            where: { userId: apt.professional.userId },
-          });
-
-          if (prefs?.channel !== "IN_APP") {
-            const user = await prisma.user.findUnique({
-              select: { email: true },
-              where: { id: apt.professional.userId },
+          if (claimed) {
+            const prefs = await prisma.notificationPreference.findUnique({
+              where: { userId: apt.professional.userId },
             });
-            if (user?.email) {
-              await sendEmail({
-                to: user.email,
-                subject,
-                html: buildAppointmentReminderHtml({
-                  patientName: apt.patient.name,
-                  professionalName: apt.professional.name,
-                  date,
-                  time,
-                  companyName: apt.workspace.name,
-                }),
+
+            if (prefs?.channel !== "IN_APP") {
+              const user = await prisma.user.findUnique({
+                select: { email: true },
+                where: { id: apt.professional.userId },
               });
+              if (user?.email) {
+                await sendEmail({
+                  to: user.email,
+                  subject,
+                  html: buildAppointmentReminderHtml({
+                    patientName: apt.patient.name,
+                    professionalName: apt.professional.name,
+                    date,
+                    time,
+                    companyName: apt.workspace.name,
+                  }),
+                });
+              }
             }
+            totalSent++;
           }
-          totalSent++;
         }
 
         // ── Notify patient ──
         if (config?.notifyPatient !== false && apt.patient.email) {
+          const claimed = await claimReminder(buildAppointmentReminderKey(apt.id, window.key, "patient"), {
+            workspaceId: ws.id,
+            channel: "EMAIL",
+            title: subject,
+            message: `Lembrete enviado para ${apt.patient.name} sobre consulta ${window.label} às ${time}.`,
+          });
+
+          if (!claimed) continue;
+
           await sendEmail({
             to: apt.patient.email,
             subject,

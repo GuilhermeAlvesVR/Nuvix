@@ -108,19 +108,19 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
                 {workspace.status === "PENDING_APPROVAL" || workspace.status === "REJECTED" || workspace.status === "SUSPENDED" ? (
                   <form action={workspace.status === "SUSPENDED" ? reactivateWorkspace : approveWorkspace}>
                     <input name="workspaceId" type="hidden" value={workspace.id} />
-                    <button className="button primary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Aprovar</button>
+                    <button className="button primary" type="submit">Aprovar</button>
                   </form>
                 ) : null}
                 {workspace.status === "ACTIVE" ? (
                   <form action={suspendWorkspace}>
                     <input name="workspaceId" type="hidden" value={workspace.id} />
-                    <button className="button secondary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Suspender</button>
+                    <button className="button secondary" type="submit">Suspender</button>
                   </form>
                 ) : null}
                 {workspace.status === "PENDING_APPROVAL" ? (
                   <form action={rejectWorkspace}>
                     <input name="workspaceId" type="hidden" value={workspace.id} />
-                    <button className="button secondary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Rejeitar</button>
+                    <button className="button secondary" type="submit">Rejeitar</button>
                   </form>
                 ) : null}
                 <DeleteWorkspaceButton workspaceName={workspace.name} workspaceId={workspace.id} />

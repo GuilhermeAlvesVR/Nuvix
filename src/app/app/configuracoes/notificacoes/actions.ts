@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { NotificationChannel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
+
+function isNotificationChannel(value: string): value is NotificationChannel {
+  return ["IN_APP", "EMAIL", "BOTH"].includes(value);
+}
 
 export async function updatePreferences(formData: FormData) {
   const user = await requireCompanyUser();
@@ -12,11 +17,11 @@ export async function updatePreferences(formData: FormData) {
   const appointmentCancelled = formData.get("appointmentCancelled") === "on";
   const paymentReceived = formData.get("paymentReceived") === "on";
 
-  if (!["IN_APP", "EMAIL", "BOTH"].includes(channel)) redirect("/app/configuracoes/notificacoes?error=invalid");
+  if (!isNotificationChannel(channel)) redirect("/app/configuracoes/notificacoes?error=invalid");
 
   await prisma.notificationPreference.upsert({
-    create: { userId: user.id, channel: channel as any, appointmentReminder, appointmentCancelled, paymentReceived },
-    update: { channel: channel as any, appointmentReminder, appointmentCancelled, paymentReceived },
+    create: { userId: user.id, channel, appointmentReminder, appointmentCancelled, paymentReceived },
+    update: { channel, appointmentReminder, appointmentCancelled, paymentReceived },
     where: { userId: user.id },
   });
 

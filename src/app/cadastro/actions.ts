@@ -4,6 +4,7 @@ import { Prisma, WorkspaceType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { buildInitialProfessionalProfile } from "@/lib/registration";
 import { isValidHexColor, workspaceTypeOptions } from "@/lib/workspace";
 
 function normalizeText(value: FormDataEntryValue | null) {
@@ -90,9 +91,10 @@ export async function registerWorkspace(formData: FormData) {
 
   const slug = await buildUniqueSlug(companyName);
   const passwordHash = await hashPassword(password);
+  const alsoProfessional = formData.get("alsoProfessional") === "yes";
 
   try {
-    await prisma.workspace.create({
+    const workspace = await prisma.workspace.create({
       data: {
         name: companyName,
         slug,
@@ -112,8 +114,25 @@ export async function registerWorkspace(formData: FormData) {
             role: "ADMIN"
           }
         }
+      },
+      select: {
+        id: true,
+        users: { select: { id: true }, take: 1 }
       }
     });
+
+    const professionalProfile = buildInitialProfessionalProfile({
+      alsoProfessional,
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      ownerUserId: workspace.users[0]?.id,
+      workspaceId: workspace.id,
+    });
+
+    if (professionalProfile) {
+      await prisma.professional.create({ data: professionalProfile });
+    }
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       redirectWithError("Já existe um usuário cadastrado com este email.");

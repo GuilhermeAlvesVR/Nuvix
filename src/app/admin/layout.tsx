@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   const user = await requirePlatformAdmin();
 
   return (
-    <div className="app-shell admin-shell nuvix-surface">
+    <div className="app-shell admin-shell">
       <aside className="app-sidebar">
         <Link className="brand-mark logo-brand" href="/admin">
           <Image className="nuvix-logo" src="/brand/nuvix-logo.png" alt="Nuvix" width={120} height={38} priority />

@@ -1,0 +1,93 @@
+O Que Falta De Verdade
+
+Estado geral
+- O MVP ja tem os modulos principais implementados: login, usuarios, pacientes, profissionais, agenda, atendimento clinico, financeiro, relatorios, admin SaaS basico, faturas SaaS, webhook Mercado Pago, crons protegidos e testes basicos.
+- O que falta agora e preparar producao, testar integracoes reais, cobrir regras criticas com testes e finalizar acabamento comercial/LGPD.
+
+Prioridade 1 - Configuracao real de ambiente
+- Configurar AUTH_SECRET fixo e forte no ambiente real.
+- Configurar DATABASE_URL de producao.
+- Configurar CRON_SECRET.
+- Configurar MERCADO_PAGO_ACCESS_TOKEN oficial ou de teste conforme ambiente.
+- Configurar MERCADO_PAGO_WEBHOOK_SECRET.
+- Configurar RESEND_API_KEY se email real for usado.
+- Configurar FROM_EMAIL se email real for usado.
+- Conferir se .env local e variaveis do deploy estao alinhados.
+
+Prioridade 2 - Deploy e servicos externos
+- Subir o sistema em URL publica, preferencialmente Vercel.
+- Confirmar que o build de producao passa.
+- Confirmar que o banco de producao tem todas as migracoes/colunas necessarias.
+- Confirmar que vercel.json ou cron externo chama as rotas corretas.
+
+Prioridade 3 - Crons externos
+- Configurar chamada periodica para GET /api/notifications/reminders.
+- Configurar chamada periodica para GET ou POST /api/billing/monthly-invoices.
+- Enviar Authorization: Bearer <CRON_SECRET> ou x-cron-secret.
+- Testar retorno 401 sem segredo.
+- Testar retorno ok com segredo correto.
+- Confirmar que lembretes nao duplicam.
+- Confirmar que faturas mensais nao duplicam no mesmo mes.
+
+Prioridade 4 - Mercado Pago real
+- Configurar webhook no painel do Mercado Pago apontando para /api/mercado-pago/webhook?secret=...
+- Testar pagamento aprovado em sandbox com usuario comprador de teste, ou em producao com fatura pequena.
+- Confirmar que PlatformInvoice muda para PAID automaticamente.
+- Confirmar que paidAt e mercadoPagoPaymentId sao salvos.
+- Confirmar que pagamento pendente/cancelado nao marca fatura como paga.
+- Confirmar que uma fatura ja paga nao e sobrescrita de forma indevida.
+- Melhorar mensagem de erro do checkout quando Mercado Pago falhar.
+
+Prioridade 5 - Testes automatizados restantes
+- Permissoes por perfil: regras principais testadas em src/lib/__tests__/authorization.test.ts.
+- Permissoes por perfil: ainda falta aplicar helpers centralizados em todos os modulos conforme forem evoluindo.
+- Financeiro: pagamento parcial e pagamento total testados em src/lib/__tests__/finance.test.ts.
+- Financeiro: ainda falta teste de cancelamento/status cancelado.
+- Despesas: totais confirmados, pendentes e cancelados testados em src/lib/__tests__/finance.test.ts.
+- Atendimento clinico: status permitido, permissao principal e acao de auditoria minima testados em src/lib/__tests__/clinical.test.ts e src/lib/__tests__/authorization.test.ts.
+- Atendimento clinico: ainda falta teste integrado da mutation com Prisma mockado para criacao/edicao completa.
+- Cadastro de empresa com opcao tambem sou profissional testado em src/lib/__tests__/registration.test.ts.
+- Importacao CSV de pacientes: parser, nome obrigatorio, normalizacao de campos e dados invalidos testados em src/lib/__tests__/patient-import.test.ts.
+- Importacao CSV de pacientes: action agora usa parser CSV robusto com suporte a virgulas entre aspas.
+- Importacao CSV de pacientes: ainda falta teste integrado da action com Prisma mockado para duplicidade ja existente no banco.
+- Webhook Mercado Pago: pagamento aprovado, nao aprovado, referencia ausente e idempotencia testados em src/lib/__tests__/mercado-pago-webhook.test.ts.
+- Sessao/login: usuario inativo, workspace nao ativo, redirecionamento por perfil e segredo dev estavel testados em src/lib/__tests__/auth.test.ts.
+
+Prioridade 6 - Relatorios (concluido)
+- Melhorar filtros por profissional, status e periodo. (ja existia)
+- Criar/aperfeicoar relatorio de pacientes atendidos por periodo. (concluido: detail-card com nomes, contagem e valor)
+- Deixar pendencias financeiras mais claras. (concluido: pendingByPatient com nomes e valores)
+- Melhorar UX da exportacao CSV. (loading state ja existia)
+- Revisar se exportacoes nao vazam dados alem do necessario. (concluido: removido documento/telefone dos CSVs)
+
+Prioridade 7 - LGPD e privacidade
+- Exportacao dos dados do paciente. (concluido: botao "Exportar dados" no perfil do paciente gera JSON com historico completo)
+- Anonimizacao ou fluxo formal de inativacao LGPD. (fluxo de inativacao ja existe)
+- Politica de retencao de dados. (pendente: documental, nao codigo)
+- Auditoria mais visivel para administradores. (ja existe pagina /app/configuracoes/eventos)
+- Consentimento ou termos no cadastro. (pendente: requer decisao de produto)
+- Revisar logs para nao expor dados sensiveis. (concluido: console.error de email sanitizado, CSV sem documento/telefone)
+- Revisar mensagens de erro para nao vazar dados internos. (concluido: todas usam mensagens genericas amigaveis)
+
+Prioridade 8 - Acabamento comercial do admin SaaS
+- Planos configuraveis.
+- Valor customizado por empresa.
+- Status de inadimplencia.
+- Reenvio de link de pagamento.
+- Historico integrado de pagamentos SaaS.
+- Tela melhor para acompanhar faturas por empresa.
+
+Prioridade 9 - Limpeza tecnica antes de producao
+- Atualizar README: remover texto antigo dizendo que o proximo passo e autenticacao. (concluido)
+- Revisar pontos de tipagem fraca se aparecerem. (concluido: build passou com strict mode)
+- Rodar npm run lint. (concluido)
+- Rodar npm test. (concluido: 61 testes em 13 arquivos)
+- Rodar npm run build antes do deploy. (concluido)
+- Revisar variaveis obrigatorias no README e .env.example. (concluido)
+
+Primeiros passos recomendados
+1. Atualizar README para refletir o estado real do projeto.
+2. Melhorar tratamento de erro do checkout Mercado Pago.
+3. Adicionar testes de regras financeiras parciais/pagas.
+4. Preparar deploy com AUTH_SECRET, CRON_SECRET e Mercado Pago.
+5. Fazer teste real com fatura de R$ 1,00.

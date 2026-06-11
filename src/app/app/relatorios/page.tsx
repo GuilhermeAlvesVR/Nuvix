@@ -111,6 +111,37 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     return total + Math.max(Number(appointment.price) - paid, 0);
   }, 0);
   const attendedPatients = new Set(appointments.filter((appointment) => appointment.status === "COMPLETED").map((appointment) => appointment.patient.name));
+  const pendingByPatient = Array.from(
+    appointments
+      .filter((a) => a.financialStatus !== "CANCELLED")
+      .reduce<Map<string, { name: string; count: number; total: number }>>((groups, appointment) => {
+        const paid = appointment.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+        const pending = Math.max(Number(appointment.price) - paid, 0);
+        if (pending <= 0) return groups;
+        const current = groups.get(appointment.patient.name);
+        groups.set(appointment.patient.name, {
+          name: appointment.patient.name,
+          count: (current?.count ?? 0) + 1,
+          total: (current?.total ?? 0) + pending,
+        });
+        return groups;
+      }, new Map())
+      .values()
+  ).sort((left, right) => right.total - left.total);
+  const attendedDetail = Array.from(
+    appointments
+      .filter((a) => a.status === "COMPLETED")
+      .reduce<Map<string, { name: string; count: number; total: number }>>((groups, appointment) => {
+        const current = groups.get(appointment.patient.name);
+        groups.set(appointment.patient.name, {
+          name: appointment.patient.name,
+          count: (current?.count ?? 0) + 1,
+          total: (current?.total ?? 0) + Number(appointment.price),
+        });
+        return groups;
+      }, new Map())
+      .values()
+  ).sort((left, right) => right.count - left.count);
   const balance = receivedTotal - expensesTotal;
 
   return (
@@ -178,6 +209,34 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             <p className="detail-note">Nenhum atendimento no período.</p>
           )}
         </article>
+
+        {pendingByPatient.length > 0 && (
+          <article className="detail-card">
+            <h2>Pendências por {labels.clientPlural.toLowerCase()}</h2>
+            <dl className="breakdown-list">
+              {pendingByPatient.slice(0, 10).map((item) => (
+                <div key={item.name}>
+                  <dt>{item.name} · {item.count} {item.count === 1 ? "pendência" : "pendências"}</dt>
+                  <dd>{formatMoney(item.total)}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        )}
+
+        {attendedDetail.length > 0 && (
+          <article className="detail-card">
+            <h2>{labels.clientPlural} atendidos</h2>
+            <dl className="breakdown-list">
+              {attendedDetail.slice(0, 10).map((item) => (
+                <div key={item.name}>
+                  <dt>{item.name} · {item.count} {item.count === 1 ? "atendimento" : "atendimentos"}</dt>
+                  <dd>{formatMoney(item.total)}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        )}
       </section>
 
       <section className="finance-list" aria-label="Atendimentos do período">

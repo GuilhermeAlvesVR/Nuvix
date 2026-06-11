@@ -161,7 +161,7 @@ export default async function AppHomePage() {
             <form action="/app/configuracoes/faturas/actions/checkout" method="POST">
               <input type="hidden" name="amount" value={Number(latestInvoice.amount)} />
               <input type="hidden" name="invoiceId" value={latestInvoice.id} />
-              <button className="button primary" type="submit">Pagar via PIX</button>
+              <button className="button primary" type="submit">Pagar</button>
             </form>
           </div>
         ) : (

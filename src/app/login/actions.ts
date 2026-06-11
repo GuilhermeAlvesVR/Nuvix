@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getLoginError, getLoginRedirectPath, normalizeLoginEmail } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/session";
 import { verifyPassword } from "@/lib/password";
@@ -12,8 +13,9 @@ function redirectWithError(error = "invalid"): never {
 export async function login(formData: FormData) {
   const email = formData.get("email");
   const password = formData.get("password");
+  const normalizedEmail = normalizeLoginEmail(email);
 
-  if (typeof email !== "string" || typeof password !== "string") {
+  if (!normalizedEmail || typeof password !== "string") {
     redirectWithError();
   }
 
@@ -27,25 +29,27 @@ export async function login(formData: FormData) {
         select: { status: true }
       }
     },
-    where: { email: email.trim().toLowerCase() }
+    where: { email: normalizedEmail }
   });
 
-  if (!user?.active) {
-    redirectWithError();
+  const loginError = getLoginError(user ? {
+    active: user.active,
+    role: user.role,
+    workspaceStatus: user.workspace.status,
+  } : null);
+
+  if (loginError) {
+    redirectWithError(loginError);
   }
 
-  const validPassword = await verifyPassword(password, user.passwordHash);
+  const validPassword = await verifyPassword(password, user!.passwordHash);
 
   if (!validPassword) {
     redirectWithError();
   }
 
-  if (user.role !== "PLATFORM_ADMIN" && user.workspace.status !== "ACTIVE") {
-    redirectWithError("suspended");
-  }
-
-  await createSession(user.id);
-  redirect(user.role === "PLATFORM_ADMIN" ? "/admin" : "/app");
+  await createSession(user!.id);
+  redirect(getLoginRedirectPath(user!.role));
 }
 
 export async function logout() {

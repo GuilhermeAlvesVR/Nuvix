@@ -9,6 +9,16 @@ import { prisma } from "@/lib/prisma";
 const SESSION_COOKIE = "nuvix_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
+type SessionGlobal = typeof globalThis & {
+  __nuvixDevSessionSecret?: string;
+};
+
+export function getDevSessionSecret() {
+  const globalForSession = globalThis as SessionGlobal;
+  globalForSession.__nuvixDevSessionSecret ??= randomBytes(32).toString("hex");
+  return globalForSession.__nuvixDevSessionSecret;
+}
+
 type SessionPayload = {
   userId: string;
   expiresAt: number;
@@ -57,7 +67,7 @@ function getSessionSecret() {
     throw new Error("AUTH_SECRET is required in production.");
   }
 
-  return randomBytes(32).toString("hex");
+  return getDevSessionSecret();
 }
 
 function sign(value: string) {
