@@ -24,6 +24,11 @@ function escapeHtml(value: string) {
 
 export async function POST(request: NextRequest) {
   const user = await requireCompanyUser();
+
+  if (user.role !== "ADMIN") {
+    return redirectToInvoices(request, { error: "access" });
+  }
+
   const data = await request.formData();
   const invoiceId = String(data.get("invoiceId") ?? "");
 

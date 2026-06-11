@@ -528,7 +528,10 @@ export async function updatePatientNote(formData: FormData) {
 
 export async function exportPatientData(patientId: string) {
   const user = await requireCompanyUser();
-  const labels = getWorkspaceLabels(user.workspace);
+
+  if (user.role !== "ADMIN" && user.role !== "RECEPTIONIST") {
+    redirect(`/app/pacientes/${patientId}?error=Acesso+restrito.`);
+  }
 
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, workspaceId: user.workspaceId },
@@ -576,6 +579,17 @@ export async function exportPatientData(patientId: string) {
   if (!patient) {
     redirect(`/app/pacientes/${patientId}?error=Paciente+não+encontrado.`);
   }
+
+  await prisma.auditLog.create({
+    data: {
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      entityName: "Patient",
+      entityId: patient.id,
+      action: "EXPORT_PATIENT_DATA",
+      metadataJson: { hasDocument: Boolean(patient.document), hasClinicalRecords: patient.clinicalRecords.length > 0 }
+    }
+  });
 
   const exportData = {
     exportedAt: new Date().toISOString(),

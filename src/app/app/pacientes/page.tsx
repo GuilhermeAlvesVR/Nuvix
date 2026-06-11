@@ -59,7 +59,7 @@ export default async function PatientsPage({ searchParams }: { searchParams: Sea
       </section>
 
       {params.created ? <div className="success-message">{labels.clientSingular} cadastrado com sucesso.</div> : null}
-      {databaseError ? <div className="error-message">Não foi possível conectar ao banco de dados. Verifique o DATABASE_URL e as migrations.</div> : null}
+      {databaseError ? <div className="error-message">Não foi possível carregar os dados. Tente novamente ou contate o suporte.</div> : null}
 
       <form className="search-card" action="/app/pacientes" aria-label="Buscar pacientes">
         <label htmlFor="q">Nome, telefone, email ou documento</label>

@@ -1,8 +1,15 @@
 "use server";
 
 import type { AppointmentStatus } from "@prisma/client";
+import { canAccessReports } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
+
+function requireReportsAccess(role: Parameters<typeof canAccessReports>[0]) {
+  if (!canAccessReports(role)) {
+    throw new Error("Acesso restrito.");
+  }
+}
 
 function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return "";
@@ -39,6 +46,7 @@ function toCSV(headers: string[], rows: string[][]): string {
 
 export async function exportAppointmentsCSV(formData: FormData) {
   const user = await requireCompanyUser();
+  requireReportsAccess(user.role);
   const from = formData.get("from") as string;
   const to = formData.get("to") as string;
   const professionalId = formData.get("professionalId") as string;
@@ -86,6 +94,7 @@ export async function exportAppointmentsCSV(formData: FormData) {
 
 export async function exportPaymentsCSV(formData: FormData) {
   const user = await requireCompanyUser();
+  requireReportsAccess(user.role);
   const from = formData.get("from") as string;
   const to = formData.get("to") as string;
 
@@ -124,6 +133,7 @@ export async function exportPaymentsCSV(formData: FormData) {
 
 export async function exportExpensesCSV(formData: FormData) {
   const user = await requireCompanyUser();
+  requireReportsAccess(user.role);
   const from = formData.get("from") as string;
   const to = formData.get("to") as string;
 
@@ -160,6 +170,7 @@ export async function exportExpensesCSV(formData: FormData) {
 
 export async function exportFinancialSummaryCSV(formData: FormData) {
   const user = await requireCompanyUser();
+  requireReportsAccess(user.role);
   const from = formData.get("from") as string;
   const to = formData.get("to") as string;
 

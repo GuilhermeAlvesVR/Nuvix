@@ -77,6 +77,17 @@ export async function saveClinicalRecord(formData: FormData) {
     redirectWithError(appointment.id, `Informe ao menos uma informação para o ${labels.record.toLowerCase()}.`);
   }
 
+  if (templateId) {
+    const template = await prisma.clinicalTemplate.findFirst({
+      select: { id: true },
+      where: { id: templateId, workspaceId: currentUser.workspaceId, active: true }
+    });
+
+    if (!template) {
+      redirectWithError(appointment.id, "Modelo de atendimento inválido.");
+    }
+  }
+
   const action = getClinicalRecordAuditAction(Boolean(appointment.clinicalRecord));
 
   // Parse template data from formData

@@ -8,6 +8,10 @@ import { requireCompanyUser } from "@/lib/session";
 export async function importPatients(formData: FormData) {
   const user = await requireCompanyUser();
 
+  if (user.role !== "ADMIN" && user.role !== "RECEPTIONIST") {
+    return "Erro: acesso restrito.";
+  }
+
   const csvText = formData.get("csv") as string;
   const mappingRaw = formData.get("mapping") as string;
 

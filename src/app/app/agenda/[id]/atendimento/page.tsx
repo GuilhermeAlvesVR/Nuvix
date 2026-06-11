@@ -173,7 +173,8 @@ export default async function ClinicalAttendancePage({ params, searchParams }: {
       where: {
         workspaceId: currentUser.workspaceId,
         patientId: appointment.patientId,
-        appointmentId: { not: appointment.id }
+        appointmentId: { not: appointment.id },
+        ...(currentUser.role === "PROFESSIONAL" ? { appointment: { professional: { userId: currentUser.id } } } : {})
       },
       take: 10
     }),

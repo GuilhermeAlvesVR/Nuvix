@@ -12,12 +12,27 @@ const feedbackMessages = {
   checkout: "Nao foi possivel gerar o link de pagamento. Tente novamente em instantes.",
   pix: "Nao foi possivel gerar o PIX. Tente novamente em instantes.",
   pixUnauthorized: "PIX direto ainda nao esta liberado na conta Mercado Pago. Use cartao/boleto ou habilite Checkout Transparente/PIX no painel do Mercado Pago.",
-  invoice: "Fatura nao encontrada ou indisponivel para pagamento."
+  invoice: "Fatura nao encontrada ou indisponivel para pagamento.",
+  access: "Acesso restrito. Faturas estao disponiveis apenas para administradores."
 } as const;
 
 export default async function WorkspaceInvoicesPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireCompanyUser();
   const params = await searchParams;
+
+  if (user.role !== "ADMIN") {
+    return (
+      <main className="content-shell narrow-content">
+        <section className="empty-state full-page-state">
+          <span className="eyebrow">Configurações</span>
+          <h1>Acesso restrito</h1>
+          <p>Faturas da empresa estão disponíveis apenas para administradores.</p>
+          <Link className="button primary" href="/app/configuracoes">Voltar</Link>
+        </section>
+      </main>
+    );
+  }
+
   const feedback = params.error
     ? feedbackMessages[params.error as keyof typeof feedbackMessages] ?? feedbackMessages.checkout
     : params.success
