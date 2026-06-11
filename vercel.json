@@ -4,10 +4,6 @@
   "outputDirectory": ".next",
   "crons": [
     {
-      "path": "/api/notifications/reminders",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/billing/monthly-invoices",
       "schedule": "0 8 1 * *"
     }

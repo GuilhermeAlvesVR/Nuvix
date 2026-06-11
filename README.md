@@ -86,10 +86,11 @@ Depois acesse `http://localhost:3000`.
 
 ## Deploy Na Vercel
 
-O projeto possui `vercel.json` com crons para:
+O projeto possui `vercel.json` com cron para:
 
-- `/api/notifications/reminders`: roda a cada minuto.
 - `/api/billing/monthly-invoices`: roda no dia 1 de cada mes as 08:00 UTC.
+
+Lembretes de consulta (`/api/notifications/reminders`) precisam de serviço externo (ex: cron-job.org) chamando a URL com header `Authorization: Bearer <CRON_SECRET>`.
 
 1. Configure o projeto na Vercel apontando para este repositorio.
 
@@ -145,7 +146,7 @@ curl -X GET https://seu-dominio.vercel.app/api/notifications/reminders -H "Autho
 curl -X GET https://seu-dominio.vercel.app/api/billing/monthly-invoices -H "Authorization: Bearer SEU_CRON_SECRET"
 ```
 
-Na Vercel, quando `CRON_SECRET` esta configurado, os Vercel Crons enviam automaticamente o header `Authorization: Bearer <CRON_SECRET>`. Se usar outro provedor de cron, envie esse header manualmente ou `x-cron-secret`.
+Na Vercel, quando `CRON_SECRET` esta configurado, os Vercel Crons enviam automaticamente o header `Authorization: Bearer <CRON_SECRET>`. Para lembretes, use um serviço externo como cron-job.org com o mesmo header.
 
 7. Checklist antes de liberar producao:
 
