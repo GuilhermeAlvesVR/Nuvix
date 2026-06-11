@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
     cache: "no-store",
   });
 
+  if (!response.ok && [400, 404].includes(response.status)) {
+    return NextResponse.json({ ok: true, ignored: "payment_not_found", paymentId });
+  }
+
   if (!response.ok) {
     return NextResponse.json({ error: "Erro ao consultar pagamento" }, { status: 502 });
   }
