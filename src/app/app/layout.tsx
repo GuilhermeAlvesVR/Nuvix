@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { AppNavigation } from "./app-navigation";
-import NotificationBell from "./notification-bell";
 import { requireCompanyUser } from "@/lib/session";
 import { getWorkspaceLabels } from "@/lib/workspace";
 
@@ -82,7 +81,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
       <div className="app-main">
         <header className="app-header">
           <p>{user.name} · {roleLabels[user.role as keyof typeof roleLabels] ?? user.role}</p>
-          <NotificationBell userId={user.id} workspaceId={user.workspaceId} />
         </header>
         {children}
       </div>

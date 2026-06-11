@@ -61,16 +61,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
             </Link>
           </section>
 
-          <section className="settings-preview" aria-label="Notificações">
-            <div>
-              <h2>Notificações</h2>
-              <p>Escolha como e quando receber alertas do sistema.</p>
-            </div>
-            <Link className="button primary" href="/app/configuracoes/notificacoes">
-              Configurar
-            </Link>
-          </section>
-
           <section className="settings-preview" aria-label="Faturas">
             <div>
               <h2>Faturas</h2>

@@ -90,8 +90,6 @@ O projeto possui `vercel.json` com cron para:
 
 - `/api/billing/monthly-invoices`: roda no dia 1 de cada mes as 08:00 UTC.
 
-Lembretes de consulta (`/api/notifications/reminders`) precisam de serviço externo (ex: cron-job.org) chamando a URL com header `Authorization: Bearer <CRON_SECRET>`.
-
 1. Configure o projeto na Vercel apontando para este repositorio.
 
 2. Configure as variaveis de ambiente na Vercel:
@@ -102,11 +100,7 @@ AUTH_SECRET="..."
 CRON_SECRET="..."
 MERCADO_PAGO_ACCESS_TOKEN="..."
 MERCADO_PAGO_WEBHOOK_SECRET="..."
-RESEND_API_KEY="..."
-FROM_EMAIL="noreply@seudominio.com.br"
 ```
-
-`RESEND_API_KEY` e `FROM_EMAIL` sao opcionais. Sem `RESEND_API_KEY`, os lembretes continuam sendo registrados no sistema, mas email real nao e enviado.
 
 Use valores fortes e fixos para `AUTH_SECRET`, `CRON_SECRET` e `MERCADO_PAGO_WEBHOOK_SECRET`. Nao gere esses valores novamente depois do deploy, porque isso pode invalidar sessoes ou chamadas externas.
 
@@ -121,7 +115,6 @@ npm run migrate:patient-notes
 npm run migrate:patient-notes-updated-by
 npm run migrate:workspace-types
 npm run migrate:workspace-background
-npm run migrate:notification-reminder-key
 ```
 
 Depois rode os seeds necessarios:
@@ -142,11 +135,10 @@ No Mercado Pago, use credencial `TEST-...` apenas para sandbox e `APP_USR-...` p
 6. Para testar os crons manualmente:
 
 ```bash
-curl -X GET https://seu-dominio.vercel.app/api/notifications/reminders -H "Authorization: Bearer SEU_CRON_SECRET"
 curl -X GET https://seu-dominio.vercel.app/api/billing/monthly-invoices -H "Authorization: Bearer SEU_CRON_SECRET"
 ```
 
-Na Vercel, quando `CRON_SECRET` esta configurado, os Vercel Crons enviam automaticamente o header `Authorization: Bearer <CRON_SECRET>`. Para lembretes, use um serviço externo como cron-job.org com o mesmo header.
+Na Vercel, quando `CRON_SECRET` esta configurado, os Vercel Crons enviam automaticamente o header `Authorization: Bearer <CRON_SECRET>`.
 
 7. Checklist antes de liberar producao:
 
@@ -166,7 +158,6 @@ npm run build
 - Gerar fatura SaaS pelo cron ou admin.
 - Clicar em `Pagar` e concluir pagamento Mercado Pago.
 - Confirmar que a fatura muda para `PAID` e salva `paidAt` e `mercadoPagoPaymentId`.
-- Confirmar que `/api/notifications/reminders` responde `401` sem segredo e `200` com segredo correto.
 - Confirmar que `/api/billing/monthly-invoices` responde `401` sem segredo e `200` com segredo correto.
 
 ## Proximos Passos
