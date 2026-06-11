@@ -158,11 +158,16 @@ export default async function AppHomePage() {
               <div className="amount">{formatMoney(Number(latestInvoice.amount))}</div>
               <div className="muted-text">{latestInvoice.description ?? "Mensalidade"} · Vence {formatDate(latestInvoice.dueDate)}</div>
             </div>
-            <form action="/app/configuracoes/faturas/actions/checkout" method="POST">
-              <input type="hidden" name="amount" value={Number(latestInvoice.amount)} />
-              <input type="hidden" name="invoiceId" value={latestInvoice.id} />
-              <button className="button primary" type="submit">Pagar</button>
-            </form>
+            <div className="compact-row-actions">
+              <form action="/app/configuracoes/faturas/actions/pix" method="POST">
+                <input type="hidden" name="invoiceId" value={latestInvoice.id} />
+                <button className="button primary" type="submit">Pagar via PIX</button>
+              </form>
+              <form action="/app/configuracoes/faturas/actions/checkout" method="POST">
+                <input type="hidden" name="invoiceId" value={latestInvoice.id} />
+                <button className="button secondary" type="submit">Cartão/boleto</button>
+              </form>
+            </div>
           </div>
         ) : (
           <div className="invoice-status-widget status-ok">
