@@ -53,10 +53,12 @@ export function CreateInvoiceForm({ workspaces }: { workspaces: Workspace[] }) {
                 </option>
               ))}
             </select>
+            <span>Ao selecionar, o sistema sugere valor e vencimento com base no plano recorrente.</span>
           </div>
           <div className="field-group">
-            <label htmlFor="amount">Valor *</label>
+            <label htmlFor="amount">Valor da fatura *</label>
             <input id="amount" name="amount" type="number" step="0.01" min="0" placeholder="0,00" required defaultValue={defaultAmount} key={`amt-${selectedWs?.id ?? "empty"}`} />
+            <span>Esse valor vale apenas para esta fatura avulsa.</span>
           </div>
           <div className="field-group">
             <label htmlFor="dueDate">Vencimento *</label>
@@ -65,6 +67,7 @@ export function CreateInvoiceForm({ workspaces }: { workspaces: Workspace[] }) {
           <div className="field-group wide-field">
             <label htmlFor="description">Descrição</label>
             <input id="description" name="description" type="text" placeholder="Mensalidade - Junho/2026" defaultValue={defaultDescription} key={`desc-${selectedWs?.id ?? "empty"}`} />
+            <span>Ex.: Mensalidade, implantação, ajuste de plano ou cobrança complementar.</span>
           </div>
         </div>
         <div className="form-actions" style={{ marginTop: "12px" }}>

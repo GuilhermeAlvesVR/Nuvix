@@ -37,6 +37,19 @@ function fm(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
+function planLabel(plan: string | null) {
+  if (plan === "PRO") return "Profissional";
+  if (plan === "BASIC") return "Básico";
+  return "Gratuito";
+}
+
+function recurringAmount(workspace: { plan: string | null; customMonthlyAmount: unknown }) {
+  if (workspace.customMonthlyAmount) return Number(workspace.customMonthlyAmount);
+  if (workspace.plan === "PRO") return 49.90;
+  if (workspace.plan === "BASIC") return 29.90;
+  return 0;
+}
+
 export default async function AdminFinancePage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   await requirePlatformAdmin();
@@ -56,6 +69,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
 
   const totalPending = invoices.filter((i) => i.status === "PENDING" || i.status === "OVERDUE").reduce((sum, i) => sum + Number(i.amount), 0);
   const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + Number(i.amount), 0);
+  const overdueInvoices = invoices.filter((invoice) => isInvoiceOverdue(invoice, new Date()));
   const createdCount = params.created ? Number(params.created) : null;
   const now = new Date();
 
@@ -73,7 +87,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         <div>
           <span className="eyebrow">Plataforma</span>
           <h1>Financeiro</h1>
-          <p>Faturamento recorrente e cobranças das empresas.</p>
+          <p>Configure planos, gere faturas e acompanhe cobranças das empresas.</p>
         </div>
       </section>
 
@@ -83,15 +97,41 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       <section className="detail-summary-grid" aria-label="Indicadores financeiros">
         <article className="detail-panel"><span>Receita confirmada</span><strong>{fm(totalPaid)}</strong></article>
         <article className="detail-panel"><span>Pendente / Atrasado</span><strong>{fm(totalPending)}</strong></article>
+        <article className="detail-panel"><span>Faturas vencidas</span><strong>{overdueInvoices.length}</strong></article>
         <article className="detail-panel"><span>Empresas inadimplentes</span><strong>{delinquentWorkspaceIds.size}</strong></article>
-        <article className="detail-panel"><span>Empresas ativas</span><strong>{workspaces.length}</strong></article>
       </section>
 
-      <section className="section-divider first-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>Faturas por empresa</h2>
+      <section className="detail-summary-grid" aria-label="Como funciona o faturamento">
+        <article className="detail-panel">
+          <span>1. Plano</span>
+          <strong>Valor mensal</strong>
+          <p>Defina Básico, Profissional ou um valor customizado por empresa.</p>
+        </article>
+        <article className="detail-panel">
+          <span>2. Fatura</span>
+          <strong>Cobrança aberta</strong>
+          <p>O botão abaixo gera uma fatura mensal para cada empresa com dia de faturamento.</p>
+        </article>
+        <article className="detail-panel">
+          <span>3. Link</span>
+          <strong>PIX ou cartão</strong>
+          <p>Envie o link da fatura. O cliente paga e o webhook do Mercado Pago marca como pago.</p>
+        </article>
+      </section>
+
+      <section className="section-divider first-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <h2>Ações rápidas</h2>
+          <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Use para gerar as cobranças recorrentes do mês. Faturas já existentes no período não são duplicadas.</p>
+        </div>
         <form action={generateMonthlyInvoices}>
-          <button className="button primary" type="submit">Gerar faturas do mês</button>
+          <button className="button primary" type="submit">Gerar faturas recorrentes</button>
         </form>
+      </section>
+
+      <section className="section-divider">
+        <h2>Faturas por empresa</h2>
+        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Fatura é o valor a receber. Cobrança é o link enviado ao cliente para pagar a fatura.</p>
       </section>
 
       {invoices.length === 0 ? (
@@ -113,7 +153,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                   <div>
                     <strong style={{ fontSize: "14px" }}>{ws.name}</strong>
                     <span style={{ fontSize: "12px", color: "var(--muted)", marginLeft: "8px" }}>
-                      {paidCount}/{wsInvoices.length} pagas · {ws.plan === "PRO" ? "Profissional" : ws.plan === "BASIC" ? "Básico" : "Gratuito"}
+                      {paidCount}/{wsInvoices.length} pagas · {planLabel(ws.plan)}
                       {ws.customMonthlyAmount ? ` · ${fm(Number(ws.customMonthlyAmount))}/mês` : ""}
                       {overdueCount > 0 ? ` · ${overdueCount} atrasada(s)` : ""}
                       {lastPaid ? ` · Último pagamento: ${formatDate(lastPaid)}` : ""}
@@ -146,14 +186,14 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                       <div className="compact-row-actions">
                         {isOpenInvoice(invoice.status) ? (
                           <>
-                            <a className="button secondary" href={`/fatura/${invoice.id}`} target="_blank" rel="noreferrer" style={{ fontSize: "12px", padding: "4px 10px" }}>Abrir link</a>
+                            <a className="button secondary" href={`/fatura/${invoice.id}`} target="_blank" rel="noreferrer" style={{ fontSize: "12px", padding: "4px 10px" }}>Abrir cobrança</a>
                             <CopyInvoiceLinkButton href={`/fatura/${invoice.id}`} />
                           </>
                         ) : null}
                         {invoice.status === "PENDING" ? (
                           <form action={markInvoiceAsPaid} style={{ display: "inline" }}>
                             <input name="invoiceId" type="hidden" value={invoice.id} />
-                            <button className="button primary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Pago</button>
+                            <button className="button primary" type="submit" style={{ fontSize: "12px", padding: "4px 10px" }}>Marcar pago</button>
                           </form>
                         ) : null}
                         {(invoice.status === "PENDING" || invoice.status === "OVERDUE") ? (
@@ -173,15 +213,19 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         </div>
       )}
 
-      <section className="section-divider"><h2>Plano e faturamento das empresas</h2></section>
+      <section className="section-divider">
+        <h2>Configuração recorrente</h2>
+        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Esses dados definem quanto e quando a cobrança mensal será criada.</p>
+      </section>
 
       <div className="form-card" style={{ display: "grid", gap: "8px" }}>
-        <p style={{ fontSize: "13px", color: "var(--muted)", margin: 0 }}>Defina plano, valor customizado e dia do mês para geração automática de faturas recorrentes.</p>
         {workspaces.map((ws) => (
           <div key={ws.id} style={{ display: "grid", gap: "8px", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
             <div style={{ flex: 1 }}>
               <strong style={{ fontSize: "13px", display: "block" }}>{ws.name}</strong>
-              <span style={{ fontSize: "12px", color: "var(--muted)" }}>{ws.plan === "PRO" ? "Plano Profissional" : ws.plan === "BASIC" ? "Plano Básico" : "Plano Gratuito"}</span>
+              <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+                Plano {planLabel(ws.plan)} · valor recorrente {fm(recurringAmount(ws))}{ws.billingDay ? ` · fatura dia ${ws.billingDay}` : " · sem dia definido"}
+              </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <form action={setWorkspaceBilling} style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -191,7 +235,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                   <option value="BASIC">Básico</option>
                   <option value="PRO">Profissional</option>
                 </select>
-                <input name="customMonthlyAmount" type="number" step="0.01" min="0" placeholder="Valor/mês" defaultValue={ws.customMonthlyAmount ? String(ws.customMonthlyAmount) : ""} style={{ width: "120px" }} />
+                <input name="customMonthlyAmount" type="number" step="0.01" min="0" placeholder="Valor/mês opcional" defaultValue={ws.customMonthlyAmount ? String(ws.customMonthlyAmount) : ""} style={{ width: "160px" }} />
                 <button className="button secondary" type="submit" style={{ whiteSpace: "nowrap" }}>Salvar plano</button>
               </form>
               <form action={setBillingDay} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -207,7 +251,10 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         ))}
       </div>
 
-      <section className="section-divider"><h2>Criar fatura</h2></section>
+      <section className="section-divider">
+        <h2>Criar fatura avulsa</h2>
+        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Use para cobrar ajuste, diferença, implantação ou uma mensalidade fora da geração recorrente.</p>
+      </section>
 
       <CreateInvoiceForm workspaces={workspaces} />
     </main>

@@ -39,6 +39,7 @@ Prioridade 4 - Admin SaaS (acabamento comercial)
 - Botão para copiar link público da fatura no Admin Financeiro. (concluído)
 - Histórico integrado mostra ID do pagamento Mercado Pago nas faturas pagas. (concluído)
 - Tela do Admin Financeiro polida com abertura/cópia de link, inadimplência e dados de pagamento. (concluído)
+- Tela do Admin Financeiro reorganizada com explicação de plano, fatura, cobrança, recorrência e fatura avulsa. (concluído)
 
 Prioridade 5 - Mercado Pago real
 - Webhook funcional em /api/mercado-pago/webhook com tratamento para teste de pagamento inexistente. (concluído)
