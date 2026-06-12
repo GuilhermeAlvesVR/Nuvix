@@ -103,7 +103,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       <section className="section-divider first-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
         <h2>Clientes</h2>
         <form action={generateMonthlyInvoices}>
-          <button className="button primary" type="submit">Gerar recorrentes do mês</button>
+          <button className="button primary" type="submit">Gerar agora (manual)</button>
         </form>
       </section>
 
