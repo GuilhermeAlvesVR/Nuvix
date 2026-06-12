@@ -18,6 +18,8 @@
     "migrate:patient-notes-updated-by": "node prisma/apply-patient-notes-updated-by-migration.mjs",
     "migrate:workspace-types": "node prisma/apply-workspace-types-migration.mjs",
     "migrate:workspace-background": "node prisma/apply-workspace-background-color-migration.mjs",
+    "migrate:workspace-custom-amount": "node prisma/apply-workspace-custom-monthly-amount-migration.mjs",
+    "migrate:workspace-terms": "node prisma/apply-workspace-terms-acceptance-migration.mjs",
     "migrate:notification-reminder-key": "node prisma/apply-notification-reminder-key-migration.mjs",
     "seed:platform-admin": "node prisma/seed-platform-admin.mjs",
     "seed:templates": "node prisma/seed-templates.mjs"

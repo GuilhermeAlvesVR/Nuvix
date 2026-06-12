@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
 import {
   buildPlatformInvoicePaymentUpdate,
   extractMercadoPagoPaymentId,
   extractPlatformInvoiceIdFromPayment,
   isMercadoPagoWebhookAuthorized,
+  isMercadoPagoSignatureValid,
 } from "@/lib/mercado-pago-webhook";
 
 describe("mercado pago webhook helpers", () => {
@@ -38,6 +40,38 @@ describe("mercado pago webhook helpers", () => {
     expect(isMercadoPagoWebhookAuthorized(bearerRequest as NextRequest, "secret-123")).toBe(true);
     expect(isMercadoPagoWebhookAuthorized(headerRequest as NextRequest, "secret-123")).toBe(true);
     expect(isMercadoPagoWebhookAuthorized(headerRequest as NextRequest, undefined)).toBe(false);
+  });
+
+  it("validates official Mercado Pago webhook signature", () => {
+    const secret = "webhook-secret";
+    const requestId = "request-123";
+    const ts = "1700000000";
+    const dataId = "payment-123";
+    const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+    const v1 = createHmac("sha256", secret).update(manifest).digest("hex");
+    const request = {
+      headers: new Headers({
+        "x-request-id": requestId,
+        "x-signature": `ts=${ts},v1=${v1}`,
+      }),
+      nextUrl: new URL(`https://app.test/api/mercado-pago/webhook?data.id=${dataId}`),
+    };
+
+    expect(isMercadoPagoSignatureValid(request as NextRequest, secret)).toBe(true);
+    expect(isMercadoPagoWebhookAuthorized(request as NextRequest, secret)).toBe(true);
+  });
+
+  it("rejects invalid Mercado Pago webhook signature", () => {
+    const request = {
+      headers: new Headers({
+        "x-request-id": "request-123",
+        "x-signature": "ts=1700000000,v1=bad-signature",
+      }),
+      nextUrl: new URL("https://app.test/api/mercado-pago/webhook?data.id=payment-123"),
+    };
+
+    expect(isMercadoPagoSignatureValid(request as NextRequest, "webhook-secret")).toBe(false);
+    expect(isMercadoPagoWebhookAuthorized(request as NextRequest, "webhook-secret")).toBe(false);
   });
 
   it("builds invoice update for approved payments with invoice reference", () => {

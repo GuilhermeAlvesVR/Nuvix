@@ -2,10 +2,14 @@
 
 import { Prisma, WorkspaceType } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { buildInitialProfessionalProfile } from "@/lib/registration";
 import { isValidHexColor, workspaceTypeOptions } from "@/lib/workspace";
+
+const TERMS_VERSION = "2026-06-12";
 
 function normalizeText(value: FormDataEntryValue | null) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -51,6 +55,14 @@ async function buildUniqueSlug(name: string) {
 }
 
 export async function registerWorkspace(formData: FormData) {
+  const headerList = await headers();
+  const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() || headerList.get("x-real-ip") || "unknown";
+  const rateLimit = consumeRateLimit(`cadastro:${ip}`, 5, 60 * 60 * 1000);
+
+  if (!rateLimit.allowed) {
+    redirectWithError("Muitas tentativas de cadastro. Tente novamente mais tarde.");
+  }
+
   const companyName = normalizeText(formData.get("companyName"));
   const type = normalizeText(formData.get("type"));
   const ownerName = normalizeText(formData.get("ownerName"));
@@ -60,6 +72,7 @@ export async function registerWorkspace(formData: FormData) {
   const primaryColor = normalizeText(formData.get("primaryColor")) ?? "#116466";
   const accentColor = normalizeText(formData.get("accentColor")) ?? "#d9b08c";
   const backgroundColor = normalizeText(formData.get("backgroundColor")) ?? "#f6f3ee";
+  const acceptedTerms = formData.get("acceptedTerms") === "yes";
 
   if (!companyName) {
     redirectWithError("Informe o nome da empresa.");
@@ -85,6 +98,10 @@ export async function registerWorkspace(formData: FormData) {
     redirectWithError("A senha inicial deve ter pelo menos 8 caracteres.");
   }
 
+  if (!acceptedTerms) {
+    redirectWithError("Aceite os termos de uso e privacidade para continuar.");
+  }
+
   if (!isValidHexColor(primaryColor) || !isValidHexColor(accentColor) || !isValidHexColor(backgroundColor)) {
     redirectWithError("Use cores no formato hexadecimal, por exemplo #116466.");
   }
@@ -106,6 +123,8 @@ export async function registerWorkspace(formData: FormData) {
         primaryColor,
         accentColor,
         backgroundColor,
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
         users: {
           create: {
             name: ownerName,

@@ -1,13 +1,49 @@
 import type { NextRequest } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export function isMercadoPagoWebhookAuthorized(request: NextRequest, secret?: string) {
   if (!secret) return false;
+
+  if (hasMercadoPagoSignatureHeaders(request)) {
+    return isMercadoPagoSignatureValid(request, secret);
+  }
 
   const auth = request.headers.get("authorization");
   const headerSecret = request.headers.get("x-webhook-secret");
   const querySecret = request.nextUrl.searchParams.get("secret");
 
   return auth === `Bearer ${secret}` || headerSecret === secret || querySecret === secret;
+}
+
+function hasMercadoPagoSignatureHeaders(request: NextRequest) {
+  return Boolean(request.headers.get("x-signature") && request.headers.get("x-request-id"));
+}
+
+function getSignaturePart(signature: string, key: string) {
+  return signature
+    .split(",")
+    .map((part) => part.trim().split("="))
+    .find(([name]) => name === key)?.[1] ?? null;
+}
+
+export function isMercadoPagoSignatureValid(request: NextRequest, secret: string) {
+  const signature = request.headers.get("x-signature");
+  const requestId = request.headers.get("x-request-id");
+  const dataId = request.nextUrl.searchParams.get("data.id");
+
+  if (!signature || !requestId || !dataId) return false;
+
+  const ts = getSignaturePart(signature, "ts");
+  const v1 = getSignaturePart(signature, "v1");
+  if (!ts || !v1) return false;
+
+  const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+  const expected = createHmac("sha256", secret).update(manifest).digest("hex");
+
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const receivedBuffer = Buffer.from(v1, "hex");
+
+  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
 export function getRecord(value: unknown): Record<string, unknown> | null {

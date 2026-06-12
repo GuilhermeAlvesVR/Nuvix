@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { requireCompanyUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getMercadoPagoPaymentError } from "@/lib/mercado-pago-errors";
 
 function redirectToInvoices(request: NextRequest, params: Record<string, string>) {
   const url = new URL("/app/configuracoes/faturas", request.nextUrl.origin);
@@ -76,14 +77,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (!response.ok) {
-    return redirectToInvoices(request, { error: "checkout" });
+    return redirectToInvoices(request, { error: getMercadoPagoPaymentError(response.status) });
   }
 
   const preference = await response.json() as { init_point?: string; sandbox_init_point?: string };
   const checkoutUrl = accessToken.startsWith("TEST-") ? preference.sandbox_init_point : preference.init_point;
 
   if (!checkoutUrl) {
-    return redirectToInvoices(request, { error: "checkout" });
+    return redirectToInvoices(request, { error: "mpPayment" });
   }
 
   return NextResponse.redirect(checkoutUrl, 303);

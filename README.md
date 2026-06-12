@@ -22,6 +22,7 @@ Construir um sistema web para consultorios usarem no dia a dia para:
 - `docs/04-modelo-dados.md`: entidades e relacionamentos iniciais.
 - `docs/05-arquitetura.md`: arquitetura tecnica sugerida.
 - `docs/06-backlog-mvp.md`: backlog inicial com criterios de aceite.
+- `docs/07-lgpd-retencao.md`: politica inicial de retencao e consentimento.
 
 ## Modulos Do MVP
 
@@ -115,6 +116,8 @@ npm run migrate:patient-notes
 npm run migrate:patient-notes-updated-by
 npm run migrate:workspace-types
 npm run migrate:workspace-background
+npm run migrate:workspace-custom-amount
+npm run migrate:workspace-terms
 ```
 
 Depois rode os seeds necessarios:
@@ -162,12 +165,11 @@ npm run build
 
 ## Proximos Passos
 
-O MVP ja possui os fluxos principais implementados. As proximas frentes sao:
+O MVP ja possui os fluxos principais implementados e o deploy de producao esta ativo. As proximas frentes sao:
 
-- Configurar variaveis reais de producao, incluindo `AUTH_SECRET`, `CRON_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET`.
-- Subir o projeto em uma URL publica e validar os crons externos.
-- Testar o Mercado Pago em fluxo real ou sandbox completo, confirmando baixa automatica de faturas.
-- Ampliar testes automatizados para permissoes, financeiro, atendimento clinico, cadastro com profissional e importacao CSV.
-- Evoluir LGPD, relatorios e acabamento comercial do admin SaaS.
+- Melhorar acabamento comercial do admin SaaS: planos configuraveis, valor customizado por empresa, reenvio de link e historico integrado.
+- Criar documentacao LGPD: politica de retencao de dados e termos/consentimento, se aprovado pelo produto.
+- Manter validacoes de seguranca, webhook Mercado Pago, PIX e crons acompanhados em producao.
+- Evoluir testes conforme novas regras forem adicionadas.
 
 Consulte `oqfalta.txt` para a lista priorizada de pendencias.

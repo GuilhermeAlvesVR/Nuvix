@@ -1,22 +1,22 @@
 # Ajustes Pendentes
 
-## Front-end (polimento)
-- Revisar consistência visual de todas as páginas internas com o Design System
-- Ajustar dashboard, pacientes, agenda, financeiro, profissionais, configurações
+## Estado Atual
+- MVP principal implementado e em produção.
+- Testes automatizados existentes e passando.
+- Lint e build passando nas últimas validações.
+- Notificações/email foram removidos do escopo atual.
+- Mercado Pago, PIX, webhook e faturamento SaaS estão implementados.
 
-## Testes
-- Zero testes no projeto (unitários, integração, E2E)
+## Pendências Reais
+- Revisar juridicamente a documentação LGPD inicial em `docs/07-lgpd-retencao.md`.
+- Revisar juridicamente o texto de aceite exibido no cadastro público.
+- Manter README e `oqfalta.txt` sincronizados com o estado real.
 
-## CI/CD
-- Sem pipeline configurado (GitHub Actions)
-
-## Features futuras (fora do escopo MVP atual)
-- Notificações por email/SMS
-- Portal do paciente
-- Importar/exportar CSV/Excel
-- Gráficos nos relatórios
-- Upload de arquivos
-- Timeline do paciente
-- Atalhos de teclado
-- Onboarding/tour guiado
-- Toggle de modo escuro
+## Ideias Futuras
+- Portal do paciente.
+- Gráficos avançados nos relatórios.
+- Upload de arquivos.
+- Timeline do paciente.
+- Atalhos de teclado.
+- Onboarding/tour guiado.
+- Toggle de modo escuro.

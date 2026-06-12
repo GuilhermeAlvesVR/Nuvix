@@ -46,6 +46,19 @@ describe("platform billing", () => {
     }));
   });
 
+  it("uses custom monthly amount when configured", async () => {
+    const { generateMonthlyPlatformInvoices } = await import("@/lib/platform-billing");
+    db.findInvoices.mockResolvedValue([]);
+    db.findWorkspaces.mockResolvedValue([{ id: "ws-custom", billingDay: 10, plan: "PRO", customMonthlyAmount: "89.90" }]);
+
+    const result = await generateMonthlyPlatformInvoices(new Date("2026-06-11T12:00:00Z"));
+
+    expect(result).toEqual({ created: 1 });
+    expect(db.createInvoice).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ workspaceId: "ws-custom", amount: 89.90, status: "PENDING" }),
+    }));
+  });
+
   it("does not create duplicate invoices for workspaces already billed", async () => {
     const { generateMonthlyPlatformInvoices } = await import("@/lib/platform-billing");
     db.findInvoices.mockResolvedValue([{ workspaceId: "ws-1" }]);

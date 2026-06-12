@@ -61,6 +61,26 @@ export async function setBillingDay(formData: FormData) {
   redirect("/admin/financeiro");
 }
 
+export async function setWorkspaceBilling(formData: FormData) {
+  await requirePlatformAdmin();
+  const workspaceId = normalizeText(formData.get("workspaceId"));
+  const plan = normalizeText(formData.get("plan"));
+  const amount = normalizeText(formData.get("customMonthlyAmount"));
+
+  if (!workspaceId || !plan) redirectWithError("Preencha todos os campos.");
+  if (!['FREE', 'BASIC', 'PRO'].includes(plan)) redirectWithError("Plano inválido.");
+
+  const parsedAmount = amount ? Number.parseFloat(amount) : null;
+  if (parsedAmount !== null && (Number.isNaN(parsedAmount) || parsedAmount <= 0)) redirectWithError("Valor customizado inválido.");
+
+  await prisma.workspace.update({
+    data: { plan, customMonthlyAmount: parsedAmount },
+    where: { id: workspaceId },
+  });
+  revalidatePath("/admin/financeiro");
+  redirect("/admin/financeiro");
+}
+
 export async function generateMonthlyInvoices() {
   await requirePlatformAdmin();
   const { created } = await generateMonthlyPlatformInvoices();

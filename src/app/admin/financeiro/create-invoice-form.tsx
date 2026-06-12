@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { createInvoice } from "./actions";
 
-type Workspace = { id: string; name: string; plan: string | null; billingDay: number | null };
+type Workspace = { id: string; name: string; plan: string | null; billingDay: number | null; customMonthlyAmount: unknown };
 
 function nextBillingDate(day: number): string {
   const now = new Date();
@@ -36,7 +36,7 @@ export function CreateInvoiceForm({ workspaces }: { workspaces: Workspace[] }) {
   }, [workspaces]);
 
   const defaultDueDate = selectedWs?.billingDay ? nextBillingDate(selectedWs.billingDay) : "";
-  const defaultAmount = selectedWs?.plan === "PRO" ? "49.90" : selectedWs?.plan === "BASIC" ? "29.90" : "";
+  const defaultAmount = selectedWs?.customMonthlyAmount ? String(selectedWs.customMonthlyAmount) : selectedWs?.plan === "PRO" ? "49.90" : selectedWs?.plan === "BASIC" ? "29.90" : "";
   const defaultDescription = defaultDueDate ? formatDescription(defaultDueDate) : "";
 
   return (

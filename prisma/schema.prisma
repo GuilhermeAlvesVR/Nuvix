@@ -90,8 +90,11 @@ model Workspace {
   appointmentLabel      String?          @map("appointment_label")
   recordLabel           String?          @map("record_label")
   plan                  String           @default("FREE") @map("plan")
+  customMonthlyAmount   Decimal?         @map("custom_monthly_amount") @db.Decimal(10, 2)
   billingDay            Int?             @map("billing_day")
   mercadoPagoCustomerId String?          @map("mercado_pago_customer_id")
+  termsAcceptedAt      DateTime?         @map("terms_accepted_at")
+  termsVersion         String?           @map("terms_version")
   active                Boolean          @default(true)
   users                 User[]
   patients              Patient[]

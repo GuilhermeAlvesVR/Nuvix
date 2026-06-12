@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { getMercadoPagoPaymentError } from "@/lib/mercado-pago-errors";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
 
@@ -76,12 +77,8 @@ export async function POST(request: NextRequest) {
     }),
   });
 
-  if (response.status === 401 || response.status === 403) {
-    return redirectToInvoices(request, { error: "pixUnauthorized" });
-  }
-
   if (!response.ok) {
-    return redirectToInvoices(request, { error: "pix" });
+    return redirectToInvoices(request, { error: getMercadoPagoPaymentError(response.status) });
   }
 
   const payment = await response.json() as {
@@ -100,7 +97,7 @@ export async function POST(request: NextRequest) {
   const ticketUrl = transactionData?.ticket_url;
 
   if (!qrCode || !qrCodeBase64) {
-    return redirectToInvoices(request, { error: "pix" });
+    return redirectToInvoices(request, { error: "mpPayment" });
   }
 
   const amount = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(invoice.amount));

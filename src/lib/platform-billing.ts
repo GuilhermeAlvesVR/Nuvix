@@ -13,7 +13,7 @@ export async function generateMonthlyPlatformInvoices(now = new Date()) {
   const existingWorkspaceIds = new Set(existingInvoices.map((invoice) => invoice.workspaceId));
 
   const workspaces = await prisma.workspace.findMany({
-    select: { id: true, billingDay: true, plan: true },
+    select: { id: true, billingDay: true, plan: true, customMonthlyAmount: true },
     where: { status: "ACTIVE", billingDay: { not: null } },
   });
 
@@ -22,7 +22,7 @@ export async function generateMonthlyPlatformInvoices(now = new Date()) {
     if (existingWorkspaceIds.has(workspace.id) || !workspace.billingDay) continue;
 
     const dueDate = new Date(year, month, Math.min(workspace.billingDay, lastDay.getDate()));
-    const amount = workspace.plan === "PRO" ? 49.90 : 29.90;
+    const amount = workspace.customMonthlyAmount ? Number(workspace.customMonthlyAmount) : workspace.plan === "PRO" ? 49.90 : 29.90;
     await prisma.platformInvoice.create({
       data: {
         workspaceId: workspace.id,
