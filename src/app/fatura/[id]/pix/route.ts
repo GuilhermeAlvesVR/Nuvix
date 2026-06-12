@@ -31,6 +31,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!response.ok) {
+    const details = await response.json().catch(() => null) as { message?: string; error?: string; status?: number } | null;
+    console.error("Mercado Pago public pix failed", { status: response.status, message: details?.message, error: details?.error });
     redirectUrl.searchParams.set("error", getMercadoPagoPaymentError(response.status));
     return NextResponse.redirect(redirectUrl, 303);
   }

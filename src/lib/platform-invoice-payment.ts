@@ -35,7 +35,7 @@ export function buildInvoicePaymentBody(invoice: InvoiceForPayment, origin: stri
       description: invoice.description ?? "Mensalidade Nuvix",
       payment_method_id: "pix",
       payer: {
-        email: invoice.workspace.ownerEmail ?? "pagador@nuvix.local",
+        email: invoice.workspace.ownerEmail ?? "cliente@nuvix.app",
         first_name: (invoice.workspace.ownerName ?? invoice.workspace.name).split(" ").filter(Boolean)[0] ?? invoice.workspace.name,
       },
       external_reference: invoice.id,

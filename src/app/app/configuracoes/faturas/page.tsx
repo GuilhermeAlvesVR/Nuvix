@@ -13,6 +13,7 @@ const feedbackMessages = {
   pix: "Nao foi possivel gerar o PIX. Tente novamente em instantes.",
   pixUnauthorized: "PIX direto ainda nao esta liberado na conta Mercado Pago. Use cartao/boleto ou habilite Checkout Transparente/PIX no painel do Mercado Pago.",
   mpUnauthorized: "Mercado Pago recusou a autorizacao. Confira o token de acesso e as permissoes da conta.",
+  mpValidation: "Mercado Pago recusou os dados do pagamento. Confira email do responsavel, valor e dados da fatura.",
   mpRateLimited: "Mercado Pago recebeu muitas tentativas. Aguarde alguns minutos e tente novamente.",
   mpUnavailable: "Mercado Pago esta temporariamente indisponivel. Tente novamente em instantes.",
   mpPayment: "Nao foi possivel iniciar o pagamento agora. Verifique a fatura e tente novamente.",

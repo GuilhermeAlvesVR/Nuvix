@@ -12,6 +12,7 @@ const messages = {
   pending: "Pagamento pendente. A fatura sera atualizada quando o Mercado Pago confirmar.",
   canceled: "Pagamento cancelado. Voce pode tentar novamente.",
   mpUnauthorized: "Mercado Pago recusou a autorizacao. Entre em contato com o suporte.",
+  mpValidation: "Mercado Pago recusou os dados do pagamento. Entre em contato com o suporte.",
   mpRateLimited: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
   mpUnavailable: "Mercado Pago esta temporariamente indisponivel.",
   mpPayment: "Nao foi possivel iniciar o pagamento agora.",
