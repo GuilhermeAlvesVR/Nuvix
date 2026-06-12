@@ -1,5 +1,5 @@
-const CACHE = "nuvix-v1";
-const ASSETS = ["/manifest", "/login"];
+const CACHE = "nuvix-v2";
+const ASSETS = ["/manifest.webmanifest", "/icons/icon.svg", "/brand/nuvix-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -8,8 +8,12 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => response)
+      .catch(() => caches.match(event.request))
   );
 });
 
