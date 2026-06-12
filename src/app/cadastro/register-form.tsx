@@ -175,7 +175,7 @@ export function RegisterWorkspaceForm({
         <input name="acceptedTerms" type="checkbox" value="yes" required />
         <span>
           <strong>Termos e privacidade</strong>
-          <p>Declaro que sou responsável pelos dados cadastrados pela empresa e aceito o tratamento de dados necessário para operação do sistema, conforme a política inicial de LGPD.</p>
+          <p>Declaro que li e aceito os Termos de Uso e a Política de Privacidade do Nuvix. Confirmo que sou responsável pelas informações cadastradas em nome da empresa e autorizo o tratamento dos dados necessários para criação da conta, prestação do serviço, segurança, auditoria e cumprimento de obrigações legais e contratuais.</p>
         </span>
       </label>
 

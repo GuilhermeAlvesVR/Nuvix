@@ -8,11 +8,11 @@ export function DeleteWorkspaceButton({ workspaceName, workspaceId }: {
 }) {
   return (
     <form action={deleteWorkspace} onSubmit={(e) => {
-      if (!confirm(`Excluir "${workspaceName}" permanentemente? Todos os dados serão perdidos.`)) e.preventDefault();
+      if (!confirm(`Arquivar "${workspaceName}"? A empresa sai da lista, mas os dados ficam preservados para auditoria e LGPD.`)) e.preventDefault();
     }}>
       <input name="workspaceId" type="hidden" value={workspaceId} />
       <button className="button secondary" type="submit" style={{ color: "var(--danger-fg, #e00)", borderColor: "var(--danger-bg, #fdd)" }}>
-        Excluir
+        Arquivar
       </button>
     </form>
   );

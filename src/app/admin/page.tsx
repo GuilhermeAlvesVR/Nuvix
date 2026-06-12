@@ -17,7 +17,7 @@ const savedMessages: Record<string, string> = {
   active: "Empresa aprovada ou reativada com sucesso.",
   rejected: "Empresa rejeitada com sucesso.",
   suspended: "Empresa suspensa com sucesso.",
-  excluida: "Empresa excluída com sucesso."
+  arquivada: "Empresa arquivada com sucesso."
 };
 
 function formatDate(date: Date | null) {
@@ -35,7 +35,7 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
   const [workspaces, totals] = await Promise.all([
     prisma.workspace.findMany({
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-      where: { slug: { not: PLATFORM_WORKSPACE_SLUG } },
+      where: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true },
       select: {
         id: true, name: true, slug: true, status: true, type: true,
         ownerName: true, ownerEmail: true, ownerPhone: true,
@@ -44,11 +44,11 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
       }
     }),
     Promise.all([
-      prisma.workspace.count({ where: { slug: { not: PLATFORM_WORKSPACE_SLUG } } }),
-      prisma.user.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG } } } }),
-      prisma.patient.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG } } } }),
-      prisma.appointment.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG } } } }),
-      prisma.payment.aggregate({ where: { status: "CONFIRMED", workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG } } }, _sum: { amount: true } })
+      prisma.workspace.count({ where: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true } }),
+      prisma.user.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true } } }),
+      prisma.patient.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true } } }),
+      prisma.appointment.count({ where: { workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true } } }),
+      prisma.payment.aggregate({ where: { status: "CONFIRMED", workspace: { slug: { not: PLATFORM_WORKSPACE_SLUG }, active: true } }, _sum: { amount: true } })
     ])
   ]);
 

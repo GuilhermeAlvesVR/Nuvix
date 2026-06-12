@@ -45,8 +45,11 @@ export async function deleteWorkspace(formData: FormData) {
   const ws = await prisma.workspace.findUnique({ select: { slug: true, name: true }, where: { id: workspaceId } });
   if (!ws || ws.slug === PLATFORM_WORKSPACE_SLUG) redirect("/admin?error=workspace-invalido");
 
-  await prisma.auditLog.create({ data: { workspaceId: user.workspaceId, userId: user.id, entityName: "Workspace", entityId: workspaceId, action: "PLATFORM_WORKSPACE_DELETED", metadataJson: { name: ws.name, slug: ws.slug, targetWorkspaceId: workspaceId } } });
-  await prisma.workspace.delete({ where: { id: workspaceId } });
+  await prisma.workspace.update({
+    data: { active: false, status: "SUSPENDED", suspendedAt: new Date() },
+    where: { id: workspaceId }
+  });
+  await prisma.auditLog.create({ data: { workspaceId: user.workspaceId, userId: user.id, entityName: "Workspace", entityId: workspaceId, action: "PLATFORM_WORKSPACE_ARCHIVED", metadataJson: { name: ws.name, slug: ws.slug, targetWorkspaceId: workspaceId } } });
   revalidatePath("/admin");
-  redirect("/admin?saved=excluida");
+  redirect("/admin?saved=arquivada");
 }

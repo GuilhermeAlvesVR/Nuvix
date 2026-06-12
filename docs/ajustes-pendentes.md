@@ -8,8 +8,8 @@
 - Mercado Pago, PIX, webhook e faturamento SaaS estão implementados.
 
 ## Pendências Reais
-- Revisar juridicamente a documentação LGPD inicial em `docs/07-lgpd-retencao.md`.
-- Revisar juridicamente o texto de aceite exibido no cadastro público.
+- Revisar com advogado a minuta de LGPD, termos e retencao em `docs/07-lgpd-retencao.md`.
+- Publicar links de Termos de Uso e Politica de Privacidade no cadastro/login quando a versao juridica final estiver aprovada.
 - Manter README e este documento sincronizados com o estado real.
 
 ## Ideias Futuras
