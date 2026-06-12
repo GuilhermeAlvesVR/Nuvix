@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePlatformAdmin } from "@/lib/session";
-import { cancelInvoice, generateMonthlyInvoices, markInvoiceAsPaid, setBillingDay, setWorkspaceBilling } from "./actions";
+import { cancelInvoice, createInvoice, generateMonthlyInvoices, markInvoiceAsPaid, setWorkspaceBilling } from "./actions";
 import { CopyInvoiceLinkButton } from "./copy-invoice-link-button";
-import { CreateInvoiceForm } from "./create-invoice-form";
 
 type SearchParams = Promise<{ created?: string; error?: string }>;
 
@@ -101,72 +100,85 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         <article className="detail-panel"><span>Empresas inadimplentes</span><strong>{delinquentWorkspaceIds.size}</strong></article>
       </section>
 
-      <section className="detail-summary-grid" aria-label="Como funciona o faturamento">
-        <article className="detail-panel">
-          <span>1. Plano</span>
-          <strong>Valor mensal</strong>
-          <p>Defina Básico, Profissional ou um valor customizado por empresa.</p>
-        </article>
-        <article className="detail-panel">
-          <span>2. Fatura</span>
-          <strong>Cobrança aberta</strong>
-          <p>O botão abaixo gera uma fatura mensal para cada empresa com dia de faturamento.</p>
-        </article>
-        <article className="detail-panel">
-          <span>3. Link</span>
-          <strong>PIX ou cartão</strong>
-          <p>Envie o link da fatura. O cliente paga e o webhook do Mercado Pago marca como pago.</p>
-        </article>
-      </section>
-
       <section className="section-divider first-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-        <div>
-          <h2>Ações rápidas</h2>
-          <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Use para gerar as cobranças recorrentes do mês. Faturas já existentes no período não são duplicadas.</p>
-        </div>
+        <h2>Clientes</h2>
         <form action={generateMonthlyInvoices}>
-          <button className="button primary" type="submit">Gerar faturas recorrentes</button>
+          <button className="button primary" type="submit">Gerar recorrentes do mês</button>
         </form>
       </section>
 
-      <section className="section-divider">
-        <h2>Faturas por empresa</h2>
-        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Fatura é o valor a receber. Cobrança é o link enviado ao cliente para pagar a fatura.</p>
-      </section>
-
-      {invoices.length === 0 ? (
-        <div className="empty-state"><h2>Nenhuma fatura</h2><p>Gere as faturas automaticamente ou crie manualmente abaixo.</p></div>
-      ) : (
-        <div className="finance-list">
-          {workspaces.filter((ws) => invoicesByWorkspace.has(ws.id)).map((ws) => {
-            const wsInvoices = invoicesByWorkspace.get(ws.id)!;
+      <div className="finance-list">
+          {workspaces.map((ws) => {
+            const wsInvoices = invoicesByWorkspace.get(ws.id) ?? [];
             const paidCount = wsInvoices.filter((i) => i.status === "PAID").length;
             const pendingInvoices = wsInvoices.filter((i) => isOpenInvoice(i.status));
             const pendingCount = pendingInvoices.length;
             const overdueCount = pendingInvoices.filter((i) => isInvoiceOverdue(i, now)).length;
             const totalOwed = pendingInvoices.reduce((s, i) => s + Number(i.amount), 0);
-            const lastPaid = wsInvoices.find((i) => i.status === "PAID")?.paidAt ?? null;
-
             return (
-              <div key={ws.id} style={{ marginBottom: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "8px 0 4px", borderBottom: "1px solid var(--border)" }}>
+              <details key={ws.id} className="form-card" style={{ marginBottom: "12px" }}>
+                <summary style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
                   <div>
-                    <strong style={{ fontSize: "14px" }}>{ws.name}</strong>
-                    <span style={{ fontSize: "12px", color: "var(--muted)", marginLeft: "8px" }}>
-                      {paidCount}/{wsInvoices.length} pagas · {planLabel(ws.plan)}
-                      {ws.customMonthlyAmount ? ` · ${fm(Number(ws.customMonthlyAmount))}/mês` : ""}
-                      {overdueCount > 0 ? ` · ${overdueCount} atrasada(s)` : ""}
-                      {lastPaid ? ` · Último pagamento: ${formatDate(lastPaid)}` : ""}
-                    </span>
+                    <strong>{ws.name}</strong>
+                    <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
+                      {planLabel(ws.plan)} · {ws.billingDay ? `recorrente dia ${ws.billingDay}` : "sem recorrência"} · {fm(recurringAmount(ws))}/mês
+                    </div>
                   </div>
-                  {pendingCount > 0 ? (
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--danger)" }}>
-                      {fm(totalOwed)} em aberto
-                    </span>
-                  ) : null}
-                </div>
-                <div className="finance-table compact-list-table">
-                  {wsInvoices.map((invoice) => {
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <span className={`badge ${pendingCount > 0 ? "cancelled" : "confirmed"}`}>{pendingCount > 0 ? `${fm(totalOwed)} aberto` : "Em dia"}</span>
+                    <span style={{ fontSize: "12px", color: "var(--muted)" }}>{wsInvoices.length} fatura(s)</span>
+                    {overdueCount > 0 ? <span className="badge cancelled">{overdueCount} atrasada(s)</span> : null}
+                  </div>
+                </summary>
+
+                <section style={{ marginTop: "16px", display: "grid", gap: "16px" }}>
+                  <form action={setWorkspaceBilling} style={{ display: "flex", alignItems: "end", gap: "10px", flexWrap: "wrap", padding: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                    <input name="workspaceId" type="hidden" value={ws.id} />
+                    <label className="field-group" style={{ margin: 0 }}>
+                      <span>Recorrente</span>
+                      <select name="recurringEnabled" defaultValue={ws.billingDay ? "yes" : "no"}>
+                        <option value="no">Desligado</option>
+                        <option value="yes">Ligado</option>
+                      </select>
+                    </label>
+                    <label className="field-group" style={{ margin: 0 }}>
+                      <span>Plano</span>
+                      <select name="plan" defaultValue={ws.plan}>
+                        <option value="FREE">Gratuito</option>
+                        <option value="BASIC">Básico</option>
+                        <option value="PRO">Profissional</option>
+                      </select>
+                    </label>
+                    <label className="field-group" style={{ margin: 0 }}>
+                      <span>Valor/mês</span>
+                      <input name="customMonthlyAmount" type="number" step="0.01" min="0" placeholder="Opcional" defaultValue={ws.customMonthlyAmount ? String(ws.customMonthlyAmount) : ""} style={{ width: "130px" }} />
+                    </label>
+                    <label className="field-group" style={{ margin: 0 }}>
+                      <span>Dia</span>
+                      <select name="billingDay" defaultValue={ws.billingDay ?? ""} style={{ width: "90px" }}>
+                        <option value="">--</option>
+                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}º</option>)}
+                      </select>
+                    </label>
+                    <button className="button secondary" type="submit">Salvar</button>
+                  </form>
+
+                  <details>
+                    <summary style={{ cursor: "pointer", fontWeight: 700 }}>Criar fatura avulsa</summary>
+                    <form action={createInvoice} style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "end", marginTop: "10px" }}>
+                      <input name="workspaceId" type="hidden" value={ws.id} />
+                      <label className="field-group" style={{ margin: 0 }}><span>Valor</span><input name="amount" type="number" step="0.01" min="0" required /></label>
+                      <label className="field-group" style={{ margin: 0 }}><span>Vencimento</span><input name="dueDate" type="date" required /></label>
+                      <label className="field-group" style={{ margin: 0, minWidth: "240px" }}><span>Descrição</span><input name="description" type="text" placeholder="Ex.: Implantação" /></label>
+                      <button className="button primary" type="submit">Criar</button>
+                    </form>
+                  </details>
+
+                  <details>
+                    <summary style={{ cursor: "pointer", fontWeight: 700 }}>Ver faturas ({wsInvoices.length})</summary>
+                    <div className="finance-table compact-list-table" style={{ marginTop: "10px" }}>
+                      {wsInvoices.length === 0 ? <div className="empty-state"><p>Nenhuma fatura para este cliente.</p></div> : null}
+                      {wsInvoices.map((invoice) => {
                     const overdue = isInvoiceOverdue(invoice, now);
                     const visualStatus = overdue ? "OVERDUE" : invoice.status;
 
@@ -206,57 +218,13 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                     </div>
                   );
                   })}
-                </div>
-              </div>
+                    </div>
+                  </details>
+                </section>
+              </details>
             );
           })}
-        </div>
-      )}
-
-      <section className="section-divider">
-        <h2>Configuração recorrente</h2>
-        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Esses dados definem quanto e quando a cobrança mensal será criada.</p>
-      </section>
-
-      <div className="form-card" style={{ display: "grid", gap: "8px" }}>
-        {workspaces.map((ws) => (
-          <div key={ws.id} style={{ display: "grid", gap: "8px", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--surface)" }}>
-            <div style={{ flex: 1 }}>
-              <strong style={{ fontSize: "13px", display: "block" }}>{ws.name}</strong>
-              <span style={{ fontSize: "12px", color: "var(--muted)" }}>
-                Plano {planLabel(ws.plan)} · valor recorrente {fm(recurringAmount(ws))}{ws.billingDay ? ` · fatura dia ${ws.billingDay}` : " · sem dia definido"}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <form action={setWorkspaceBilling} style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <input name="workspaceId" type="hidden" value={ws.id} />
-                <select name="plan" defaultValue={ws.plan} style={{ width: "auto", minWidth: "110px" }}>
-                  <option value="FREE">Gratuito</option>
-                  <option value="BASIC">Básico</option>
-                  <option value="PRO">Profissional</option>
-                </select>
-                <input name="customMonthlyAmount" type="number" step="0.01" min="0" placeholder="Valor/mês opcional" defaultValue={ws.customMonthlyAmount ? String(ws.customMonthlyAmount) : ""} style={{ width: "160px" }} />
-                <button className="button secondary" type="submit" style={{ whiteSpace: "nowrap" }}>Salvar plano</button>
-              </form>
-              <form action={setBillingDay} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <input name="workspaceId" type="hidden" value={ws.id} />
-                <select name="billingDay" defaultValue={ws.billingDay ?? ""} style={{ width: "auto", minWidth: "80px" }}>
-                  <option value="">--</option>
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}º</option>)}
-                </select>
-                <button className="button secondary" type="submit" style={{ whiteSpace: "nowrap" }}>Salvar dia</button>
-              </form>
-            </div>
-          </div>
-        ))}
       </div>
-
-      <section className="section-divider">
-        <h2>Criar fatura avulsa</h2>
-        <p style={{ color: "var(--muted)", fontSize: "13px", margin: "4px 0 0" }}>Use para cobrar ajuste, diferença, implantação ou uma mensalidade fora da geração recorrente.</p>
-      </section>
-
-      <CreateInvoiceForm workspaces={workspaces} />
     </main>
   );
 }

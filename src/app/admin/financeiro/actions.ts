@@ -49,32 +49,26 @@ export async function cancelInvoice(formData: FormData) {
   redirect("/admin/financeiro");
 }
 
-export async function setBillingDay(formData: FormData) {
-  await requirePlatformAdmin();
-  const workspaceId = normalizeText(formData.get("workspaceId"));
-  const day = normalizeText(formData.get("billingDay"));
-  if (!workspaceId || !day) redirectWithError("Preencha todos os campos.");
-  const parsedDay = Number.parseInt(day);
-  if (Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 28) redirectWithError("Dia inválido (1-28).");
-  await prisma.workspace.update({ data: { billingDay: parsedDay }, where: { id: workspaceId } });
-  revalidatePath("/admin/financeiro");
-  redirect("/admin/financeiro");
-}
-
 export async function setWorkspaceBilling(formData: FormData) {
   await requirePlatformAdmin();
   const workspaceId = normalizeText(formData.get("workspaceId"));
   const plan = normalizeText(formData.get("plan"));
   const amount = normalizeText(formData.get("customMonthlyAmount"));
+  const recurringEnabled = formData.get("recurringEnabled") === "yes";
+  const day = normalizeText(formData.get("billingDay"));
 
   if (!workspaceId || !plan) redirectWithError("Preencha todos os campos.");
   if (!['FREE', 'BASIC', 'PRO'].includes(plan)) redirectWithError("Plano inválido.");
 
   const parsedAmount = amount ? Number.parseFloat(amount) : null;
   if (parsedAmount !== null && (Number.isNaN(parsedAmount) || parsedAmount <= 0)) redirectWithError("Valor customizado inválido.");
+  const parsedDay = recurringEnabled ? Number.parseInt(day ?? "") : null;
+  if (recurringEnabled) {
+    if (parsedDay === null || Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 28) redirectWithError("Dia inválido (1-28).");
+  }
 
   await prisma.workspace.update({
-    data: { plan, customMonthlyAmount: parsedAmount },
+    data: { plan, customMonthlyAmount: parsedAmount, billingDay: parsedDay },
     where: { id: workspaceId },
   });
   revalidatePath("/admin/financeiro");
