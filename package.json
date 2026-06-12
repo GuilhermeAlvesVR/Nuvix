@@ -2,6 +2,7 @@
   "name": "nuvix-consultorios",
   "version": "0.1.0",
   "private": true,
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -22,7 +23,9 @@
     "migrate:workspace-terms": "node prisma/apply-workspace-terms-acceptance-migration.mjs",
     "migrate:notification-reminder-key": "node prisma/apply-notification-reminder-key-migration.mjs",
     "seed:platform-admin": "node prisma/seed-platform-admin.mjs",
-    "seed:templates": "node prisma/seed-templates.mjs"
+    "seed:templates": "node prisma/seed-templates.mjs",
+    "desktop:dev": "electron desktop/main.cjs",
+    "desktop:build": "electron-builder --win nsis"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -41,6 +44,8 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.2.7",
     "jsdom": "^29.1.1",
@@ -49,5 +54,30 @@
   },
   "overrides": {
     "postcss": "^8.5.10"
+  },
+  "build": {
+    "appId": "com.nuvix.desktop",
+    "productName": "Nuvix",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "desktop/**/*",
+      "public/brand/**/*",
+      "public/icons/**/*",
+      "icone.*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icone.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nuvix"
+    }
   }
 }

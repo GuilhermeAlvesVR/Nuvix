@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { invalidateAgendaData } from "@/lib/app-cache";
-import { canAccessClinicalRecord } from "@/lib/authorization";
+import { canEditClinicalRecord } from "@/lib/authorization";
 import { canSaveClinicalRecordForStatus, getClinicalRecordAuditAction } from "@/lib/clinical";
 import { prisma } from "@/lib/prisma";
 import { requireCompanyUser } from "@/lib/session";
@@ -65,7 +65,7 @@ export async function saveClinicalRecord(formData: FormData) {
     redirect("/app/agenda?error=Atendimento não encontrado.");
   }
 
-  if (!canAccessClinicalRecord(currentUser.role, appointment.professional.userId, currentUser.id)) {
+  if (!canEditClinicalRecord(currentUser.role, appointment.professional.userId, currentUser.id)) {
     redirectWithError(appointment.id, "Apenas o profissional vinculado a este atendimento pode criar ou editar o registro.");
   }
 

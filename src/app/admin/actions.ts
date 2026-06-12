@@ -16,7 +16,7 @@ function statusDate(status: WorkspaceStatus) {
 }
 
 async function updateWorkspaceStatus(formData: FormData, status: WorkspaceStatus) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const workspaceId = formData.get("workspaceId");
   if (typeof workspaceId !== "string" || !workspaceId) redirect("/admin?error=workspace-invalido");
 
@@ -27,6 +27,7 @@ async function updateWorkspaceStatus(formData: FormData, status: WorkspaceStatus
   if (!workspace || workspace.slug === PLATFORM_WORKSPACE_SLUG) redirect("/admin?error=workspace-invalido");
 
   await prisma.workspace.update({ data: { status, ...statusDate(status) }, where: { id: workspaceId } });
+  await prisma.auditLog.create({ data: { workspaceId, userId: user.id, entityName: "Workspace", entityId: workspaceId, action: `PLATFORM_WORKSPACE_${status}` } });
   revalidatePath("/admin");
   redirect(`/admin?saved=${status.toLowerCase()}`);
 }
@@ -37,13 +38,14 @@ export async function suspendWorkspace(formData: FormData) { await updateWorkspa
 export async function reactivateWorkspace(formData: FormData) { await updateWorkspaceStatus(formData, "ACTIVE"); }
 
 export async function deleteWorkspace(formData: FormData) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const workspaceId = formData.get("workspaceId");
   if (typeof workspaceId !== "string" || !workspaceId) redirect("/admin?error=workspace-invalido");
 
-  const ws = await prisma.workspace.findUnique({ select: { slug: true }, where: { id: workspaceId } });
+  const ws = await prisma.workspace.findUnique({ select: { slug: true, name: true }, where: { id: workspaceId } });
   if (!ws || ws.slug === PLATFORM_WORKSPACE_SLUG) redirect("/admin?error=workspace-invalido");
 
+  await prisma.auditLog.create({ data: { workspaceId: user.workspaceId, userId: user.id, entityName: "Workspace", entityId: workspaceId, action: "PLATFORM_WORKSPACE_DELETED", metadataJson: { name: ws.name, slug: ws.slug, targetWorkspaceId: workspaceId } } });
   await prisma.workspace.delete({ where: { id: workspaceId } });
   revalidatePath("/admin");
   redirect("/admin?saved=excluida");

@@ -2,6 +2,7 @@ import type { UserRole } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import {
   canAccessClinicalRecord,
+  canEditClinicalRecord,
   canAccessReports,
   canManageAppointmentStatus,
   canManageExpenses,
@@ -41,5 +42,13 @@ describe("authorization business rules", () => {
     expect(canAccessClinicalRecord("PROFESSIONAL", "professional-user", "other-user")).toBe(false);
     expect(canAccessClinicalRecord("RECEPTIONIST", "professional-user", "professional-user")).toBe(false);
     expect(canAccessClinicalRecord("PLATFORM_ADMIN", "professional-user", "professional-user")).toBe(false);
+  });
+
+  it("allows clinical record editing only for assigned professionals", () => {
+    expect(canEditClinicalRecord("ADMIN", "professional-user", "other-user")).toBe(false);
+    expect(canEditClinicalRecord("PROFESSIONAL", "professional-user", "professional-user")).toBe(true);
+    expect(canEditClinicalRecord("PROFESSIONAL", "professional-user", "other-user")).toBe(false);
+    expect(canEditClinicalRecord("RECEPTIONIST", "professional-user", "professional-user")).toBe(false);
+    expect(canEditClinicalRecord("PLATFORM_ADMIN", "professional-user", "professional-user")).toBe(false);
   });
 });

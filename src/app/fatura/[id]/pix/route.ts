@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPaymentError } from "@/lib/mercado-pago-errors";
 import { buildInvoicePaymentBody } from "@/lib/platform-invoice-payment";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -17,13 +18,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!invoice) return NextResponse.redirect(redirectUrl, 303);
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  if (!consumeRateLimit(`public-pix:${ip}:${invoice.id}`, 5, 15 * 60 * 1000).allowed) {
+    redirectUrl.searchParams.set("error", "mpRateLimited");
+    return NextResponse.redirect(redirectUrl, 303);
+  }
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!accessToken) {
     redirectUrl.searchParams.set("error", "configuration");
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  const { pix } = buildInvoicePaymentBody(invoice, request.nextUrl.origin, process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+  const { pix } = buildInvoicePaymentBody(invoice, request.nextUrl.origin);
   const response = await fetch("https://api.mercadopago.com/v1/payments", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Idempotency-Key": `${invoice.id}-${randomUUID()}`, Authorization: `Bearer ${accessToken}` },
@@ -31,8 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
 
   if (!response.ok) {
-    const details = await response.json().catch(() => null) as { message?: string; error?: string; status?: number } | null;
-    console.error("Mercado Pago public pix failed", { status: response.status, message: details?.message, error: details?.error });
+    console.error("Mercado Pago public pix failed", { status: response.status });
     redirectUrl.searchParams.set("error", getMercadoPagoPaymentError(response.status));
     return NextResponse.redirect(redirectUrl, 303);
   }

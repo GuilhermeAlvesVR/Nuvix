@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildPlatformInvoicePaymentUpdate,
   extractMercadoPagoPaymentId,
+  extractPlatformInvoiceIdFromPayment,
   getRecord,
+  isPaymentCompatibleWithInvoice,
   isMercadoPagoWebhookAuthorized,
 } from "@/lib/mercado-pago-webhook";
 import { prisma } from "@/lib/prisma";
@@ -43,14 +45,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Resposta inválida do Mercado Pago" }, { status: 502 });
   }
 
-  const invoicePaymentUpdate = buildPlatformInvoicePaymentUpdate(payment, paymentId);
-
-  if (!invoicePaymentUpdate && payment.status !== "approved") {
-    return NextResponse.json({ ok: true, ignored: "payment_not_approved" });
+  const invoiceId = extractPlatformInvoiceIdFromPayment(payment);
+  if (!invoiceId) {
+    return NextResponse.json({ ok: true, ignored: "missing_invoice_reference" });
   }
 
+  const invoice = await prisma.platformInvoice.findUnique({
+    select: { id: true, amount: true, status: true },
+    where: { id: invoiceId },
+  });
+
+  if (!invoice) {
+    return NextResponse.json({ ok: true, ignored: "invoice_not_found" });
+  }
+
+  if (!isPaymentCompatibleWithInvoice(payment, invoice)) {
+    return NextResponse.json({ ok: true, ignored: "payment_invoice_mismatch" });
+  }
+
+  const invoicePaymentUpdate = buildPlatformInvoicePaymentUpdate(payment, paymentId);
+
   if (!invoicePaymentUpdate) {
-    return NextResponse.json({ ok: true, ignored: "missing_invoice_reference" });
+    return NextResponse.json({ ok: true, ignored: "missing_invoice_update" });
   }
 
   const result = await prisma.platformInvoice.updateMany(invoicePaymentUpdate);

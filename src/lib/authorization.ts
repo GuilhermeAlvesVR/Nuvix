@@ -27,3 +27,7 @@ export function canManageAppointmentStatus(role: UserRole, professionalUserId: s
 export function canAccessClinicalRecord(role: UserRole, professionalUserId: string | null | undefined, currentUserId: string) {
   return role === "ADMIN" || (role === "PROFESSIONAL" && professionalUserId === currentUserId);
 }
+
+export function canEditClinicalRecord(role: UserRole, professionalUserId: string | null | undefined, currentUserId: string) {
+  return role === "PROFESSIONAL" && professionalUserId === currentUserId;
+}

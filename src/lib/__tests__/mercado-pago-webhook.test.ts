@@ -6,6 +6,7 @@ import {
   extractMercadoPagoPaymentId,
   extractPlatformInvoiceIdFromPayment,
   isMercadoPagoWebhookAuthorized,
+  isPaymentCompatibleWithInvoice,
   isMercadoPagoSignatureValid,
 } from "@/lib/mercado-pago-webhook";
 
@@ -22,24 +23,14 @@ describe("mercado pago webhook helpers", () => {
     expect(extractPlatformInvoiceIdFromPayment({ metadata: { invoiceId: "invoice-3" } })).toBe("invoice-3");
   });
 
-  it("validates webhook secret from query, bearer or header", () => {
-    const queryRequest = {
-      headers: new Headers(),
-      nextUrl: new URL("https://app.test/api/mercado-pago/webhook?secret=secret-123"),
-    };
-    const bearerRequest = {
-      headers: new Headers({ authorization: "Bearer secret-123" }),
-      nextUrl: new URL("https://app.test/api/mercado-pago/webhook"),
-    };
-    const headerRequest = {
-      headers: new Headers({ "x-webhook-secret": "secret-123" }),
-      nextUrl: new URL("https://app.test/api/mercado-pago/webhook"),
-    };
+  it("rejects query, bearer or custom header secret fallback", () => {
+    const queryRequest = { headers: new Headers(), nextUrl: new URL("https://app.test/api/mercado-pago/webhook?secret=secret-123") };
+    const bearerRequest = { headers: new Headers({ authorization: "Bearer secret-123" }), nextUrl: new URL("https://app.test/api/mercado-pago/webhook") };
+    const headerRequest = { headers: new Headers({ "x-webhook-secret": "secret-123" }), nextUrl: new URL("https://app.test/api/mercado-pago/webhook") };
 
-    expect(isMercadoPagoWebhookAuthorized(queryRequest as NextRequest, "secret-123")).toBe(true);
-    expect(isMercadoPagoWebhookAuthorized(bearerRequest as NextRequest, "secret-123")).toBe(true);
-    expect(isMercadoPagoWebhookAuthorized(headerRequest as NextRequest, "secret-123")).toBe(true);
-    expect(isMercadoPagoWebhookAuthorized(headerRequest as NextRequest, undefined)).toBe(false);
+    expect(isMercadoPagoWebhookAuthorized(queryRequest as NextRequest, "secret-123")).toBe(false);
+    expect(isMercadoPagoWebhookAuthorized(bearerRequest as NextRequest, "secret-123")).toBe(false);
+    expect(isMercadoPagoWebhookAuthorized(headerRequest as NextRequest, "secret-123")).toBe(false);
   });
 
   it("validates official Mercado Pago webhook signature", () => {
@@ -57,7 +48,22 @@ describe("mercado pago webhook helpers", () => {
       nextUrl: new URL(`https://app.test/api/mercado-pago/webhook?data.id=${dataId}`),
     };
 
-    expect(isMercadoPagoSignatureValid(request as NextRequest, secret)).toBe(true);
+    expect(isMercadoPagoSignatureValid(request as NextRequest, secret, 1700000000000)).toBe(true);
+    expect(isMercadoPagoWebhookAuthorized(request as NextRequest, secret)).toBe(false);
+  });
+
+  it("validates webhook authorization with a fresh official signature", () => {
+    const secret = "webhook-secret";
+    const requestId = "request-123";
+    const ts = String(Date.now());
+    const dataId = "payment-123";
+    const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+    const v1 = createHmac("sha256", secret).update(manifest).digest("hex");
+    const request = {
+      headers: new Headers({ "x-request-id": requestId, "x-signature": `ts=${ts},v1=${v1}` }),
+      nextUrl: new URL(`https://app.test/api/mercado-pago/webhook?data.id=${dataId}`),
+    };
+
     expect(isMercadoPagoWebhookAuthorized(request as NextRequest, secret)).toBe(true);
   });
 
@@ -114,5 +120,14 @@ describe("mercado pago webhook helpers", () => {
       id: "invoice-2",
       status: { not: "PAID" },
     });
+  });
+
+  it("validates approved payment amount, currency and invoice reference", () => {
+    const payment = { status: "approved", currency_id: "BRL", transaction_amount: 49.9, external_reference: "invoice-1" };
+
+    expect(isPaymentCompatibleWithInvoice(payment, { id: "invoice-1", amount: "49.90" })).toBe(true);
+    expect(isPaymentCompatibleWithInvoice({ ...payment, transaction_amount: 10 }, { id: "invoice-1", amount: "49.90" })).toBe(false);
+    expect(isPaymentCompatibleWithInvoice({ ...payment, currency_id: "USD" }, { id: "invoice-1", amount: "49.90" })).toBe(false);
+    expect(isPaymentCompatibleWithInvoice({ ...payment, external_reference: "other" }, { id: "invoice-1", amount: "49.90" })).toBe(false);
   });
 });

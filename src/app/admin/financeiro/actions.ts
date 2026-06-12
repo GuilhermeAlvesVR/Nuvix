@@ -16,7 +16,7 @@ function redirectWithError(message: string): never {
 }
 
 export async function createInvoice(formData: FormData) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const workspaceId = normalizeText(formData.get("workspaceId"));
   const amount = normalizeText(formData.get("amount"));
   const dueDate = normalizeText(formData.get("dueDate"));
@@ -26,31 +26,34 @@ export async function createInvoice(formData: FormData) {
   if (Number.isNaN(parsedAmount) || parsedAmount <= 0) redirectWithError("Valor inválido.");
   const parsedDueDate = new Date(`${dueDate}T12:00:00`);
   if (Number.isNaN(parsedDueDate.getTime())) redirectWithError("Data inválida.");
-  await prisma.platformInvoice.create({ data: { workspaceId, amount: parsedAmount, dueDate: parsedDueDate, description: description ?? "Mensalidade", status: "PENDING" } });
+  const invoice = await prisma.platformInvoice.create({ data: { workspaceId, amount: parsedAmount, dueDate: parsedDueDate, description: description ?? "Mensalidade", status: "PENDING" } });
+  await prisma.auditLog.create({ data: { workspaceId, userId: user.id, entityName: "PlatformInvoice", entityId: invoice.id, action: "PLATFORM_INVOICE_CREATED", metadataJson: { amount: parsedAmount, dueDate } } });
   revalidatePath("/admin/financeiro");
   redirect("/admin/financeiro");
 }
 
 export async function markInvoiceAsPaid(formData: FormData) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const invoiceId = normalizeText(formData.get("invoiceId"));
   if (!invoiceId) redirectWithError("Fatura inválida.");
-  await prisma.platformInvoice.update({ data: { status: "PAID", paidAt: new Date() }, where: { id: invoiceId } });
+  const invoice = await prisma.platformInvoice.update({ data: { status: "PAID", paidAt: new Date() }, where: { id: invoiceId } });
+  await prisma.auditLog.create({ data: { workspaceId: invoice.workspaceId, userId: user.id, entityName: "PlatformInvoice", entityId: invoice.id, action: "PLATFORM_INVOICE_MARKED_PAID", metadataJson: { manual: true } } });
   revalidatePath("/admin/financeiro");
   redirect("/admin/financeiro");
 }
 
 export async function cancelInvoice(formData: FormData) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const invoiceId = normalizeText(formData.get("invoiceId"));
   if (!invoiceId) redirectWithError("Fatura inválida.");
-  await prisma.platformInvoice.update({ data: { status: "CANCELLED" }, where: { id: invoiceId } });
+  const invoice = await prisma.platformInvoice.update({ data: { status: "CANCELLED" }, where: { id: invoiceId } });
+  await prisma.auditLog.create({ data: { workspaceId: invoice.workspaceId, userId: user.id, entityName: "PlatformInvoice", entityId: invoice.id, action: "PLATFORM_INVOICE_CANCELLED" } });
   revalidatePath("/admin/financeiro");
   redirect("/admin/financeiro");
 }
 
 export async function setWorkspaceBilling(formData: FormData) {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const workspaceId = normalizeText(formData.get("workspaceId"));
   const plan = normalizeText(formData.get("plan"));
   const amount = normalizeText(formData.get("customMonthlyAmount"));
@@ -67,17 +70,19 @@ export async function setWorkspaceBilling(formData: FormData) {
     if (parsedDay === null || Number.isNaN(parsedDay) || parsedDay < 1 || parsedDay > 28) redirectWithError("Dia inválido (1-28).");
   }
 
-  await prisma.workspace.update({
+  const workspace = await prisma.workspace.update({
     data: { plan, customMonthlyAmount: parsedAmount, billingDay: parsedDay },
     where: { id: workspaceId },
   });
+  await prisma.auditLog.create({ data: { workspaceId: workspace.id, userId: user.id, entityName: "Workspace", entityId: workspace.id, action: "PLATFORM_BILLING_UPDATED", metadataJson: { plan, customMonthlyAmount: parsedAmount, billingDay: parsedDay } } });
   revalidatePath("/admin/financeiro");
   redirect("/admin/financeiro");
 }
 
 export async function generateMonthlyInvoices() {
-  await requirePlatformAdmin();
+  const user = await requirePlatformAdmin();
   const { created } = await generateMonthlyPlatformInvoices();
+  await prisma.auditLog.create({ data: { workspaceId: user.workspaceId, userId: user.id, entityName: "PlatformInvoice", entityId: user.workspaceId, action: "PLATFORM_MONTHLY_INVOICES_GENERATED", metadataJson: { created } } });
   revalidatePath("/admin/financeiro");
   redirect(`/admin/financeiro?created=${created}`);
 }

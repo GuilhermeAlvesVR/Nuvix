@@ -3,20 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export function isMercadoPagoWebhookAuthorized(request: NextRequest, secret?: string) {
   if (!secret) return false;
-
-  if (hasMercadoPagoSignatureHeaders(request)) {
-    return isMercadoPagoSignatureValid(request, secret);
-  }
-
-  const auth = request.headers.get("authorization");
-  const headerSecret = request.headers.get("x-webhook-secret");
-  const querySecret = request.nextUrl.searchParams.get("secret");
-
-  return auth === `Bearer ${secret}` || headerSecret === secret || querySecret === secret;
-}
-
-function hasMercadoPagoSignatureHeaders(request: NextRequest) {
-  return Boolean(request.headers.get("x-signature") && request.headers.get("x-request-id"));
+  return isMercadoPagoSignatureValid(request, secret);
 }
 
 function getSignaturePart(signature: string, key: string) {
@@ -26,7 +13,7 @@ function getSignaturePart(signature: string, key: string) {
     .find(([name]) => name === key)?.[1] ?? null;
 }
 
-export function isMercadoPagoSignatureValid(request: NextRequest, secret: string) {
+export function isMercadoPagoSignatureValid(request: NextRequest, secret: string, now = Date.now()) {
   const signature = request.headers.get("x-signature");
   const requestId = request.headers.get("x-request-id");
   const dataId = request.nextUrl.searchParams.get("data.id");
@@ -36,6 +23,10 @@ export function isMercadoPagoSignatureValid(request: NextRequest, secret: string
   const ts = getSignaturePart(signature, "ts");
   const v1 = getSignaturePart(signature, "v1");
   if (!ts || !v1) return false;
+
+  const rawTimestamp = Number.parseInt(ts, 10);
+  const timestamp = rawTimestamp < 1_000_000_000_000 ? rawTimestamp * 1000 : rawTimestamp;
+  if (Number.isNaN(timestamp) || Math.abs(now - timestamp) > 10 * 60 * 1000) return false;
 
   const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
@@ -95,4 +86,15 @@ export function buildPlatformInvoicePaymentUpdate(payment: Record<string, unknow
       status: { not: "PAID" as const },
     },
   };
+}
+
+export function isPaymentCompatibleWithInvoice(payment: Record<string, unknown>, invoice: { id: string; amount: unknown }) {
+  const invoiceId = extractPlatformInvoiceIdFromPayment(payment);
+  const amount = typeof payment.transaction_amount === "number" ? payment.transaction_amount : Number(payment.transaction_amount);
+
+  return payment.status === "approved"
+    && payment.currency_id === "BRL"
+    && invoiceId === invoice.id
+    && Number.isFinite(amount)
+    && amount === Number(invoice.amount);
 }

@@ -4,10 +4,8 @@ type InvoiceForPayment = Pick<PlatformInvoice, "id" | "amount" | "description"> 
   workspace: Pick<Workspace, "ownerEmail" | "ownerName" | "name">;
 };
 
-export function buildInvoicePaymentBody(invoice: InvoiceForPayment, origin: string, webhookSecret?: string) {
-  const notificationUrl = webhookSecret
-    ? `${origin}/api/mercado-pago/webhook?secret=${encodeURIComponent(webhookSecret)}`
-    : undefined;
+export function buildInvoicePaymentBody(invoice: InvoiceForPayment, origin: string) {
+  const notificationUrl = `${origin}/api/mercado-pago/webhook`;
 
   return {
     notificationUrl,

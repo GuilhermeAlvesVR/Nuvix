@@ -41,24 +41,28 @@ export async function login(formData: FormData) {
     where: { email: normalizedEmail }
   });
 
-  const loginError = getLoginError(user ? {
-    active: user.active,
-    role: user.role,
-    workspaceStatus: user.workspace.status,
-  } : null);
-
-  if (loginError) {
-    redirectWithError(loginError);
+  if (!user) {
+    redirectWithError();
   }
 
-  const validPassword = await verifyPassword(password, user!.passwordHash);
+  const validPassword = await verifyPassword(password, user.passwordHash);
 
   if (!validPassword) {
     redirectWithError();
   }
 
-  await createSession(user!.id);
-  redirect(getLoginRedirectPath(user!.role));
+  const loginError = getLoginError({
+    active: user.active,
+    role: user.role,
+    workspaceStatus: user.workspace.status,
+  });
+
+  if (loginError) {
+    redirectWithError(loginError);
+  }
+
+  await createSession(user.id);
+  redirect(getLoginRedirectPath(user.role));
 }
 
 export async function logout() {

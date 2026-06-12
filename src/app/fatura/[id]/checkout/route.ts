@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPaymentError } from "@/lib/mercado-pago-errors";
 import { buildInvoicePaymentBody } from "@/lib/platform-invoice-payment";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,13 +13,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const redirectUrl = new URL(`/fatura/${id}`, request.nextUrl.origin);
 
   if (!invoice) return NextResponse.redirect(redirectUrl, 303);
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  if (!consumeRateLimit(`public-checkout:${ip}:${invoice.id}`, 5, 15 * 60 * 1000).allowed) {
+    redirectUrl.searchParams.set("error", "mpRateLimited");
+    return NextResponse.redirect(redirectUrl, 303);
+  }
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!accessToken) {
     redirectUrl.searchParams.set("error", "configuration");
     return NextResponse.redirect(redirectUrl, 303);
   }
 
-  const { preference } = buildInvoicePaymentBody(invoice, request.nextUrl.origin, process.env.MERCADO_PAGO_WEBHOOK_SECRET);
+  const { preference } = buildInvoicePaymentBody(invoice, request.nextUrl.origin);
   const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },

@@ -130,8 +130,10 @@ npm run seed:templates
 5. Configure o webhook do Mercado Pago para o dominio de producao:
 
 ```text
-https://seu-dominio.vercel.app/api/mercado-pago/webhook?secret=SEU_MERCADO_PAGO_WEBHOOK_SECRET
+https://seu-dominio.vercel.app/api/mercado-pago/webhook
 ```
+
+Configure tambem a chave secreta de webhook no painel do Mercado Pago e use o mesmo valor em `MERCADO_PAGO_WEBHOOK_SECRET`. O webhook valida a assinatura oficial enviada pelo Mercado Pago; nao coloque segredo na URL.
 
 No Mercado Pago, use credencial `TEST-...` apenas para sandbox e `APP_USR-...` para producao. Para teste real, crie uma fatura pequena e pague com uma conta/cartao diferente da conta vendedora.
 
@@ -163,6 +165,30 @@ npm run build
 - Confirmar que a fatura muda para `PAID` e salva `paidAt` e `mercadoPagoPaymentId`.
 - Confirmar que `/api/billing/monthly-invoices` responde `401` sem segredo e `200` com segredo correto.
 
+## Operacao Segura
+
+- Ative backups automáticos no Supabase.
+- Rode backup manual antes de migracoes ou alteracoes grandes:
+
+```powershell
+.\scripts\backup.ps1
+```
+
+- Guarde backups fora do repositorio. A pasta `backups/` é ignorada pelo Git.
+- Monitore os logs da Vercel apos deploy, pagamento e cadastro publico.
+- Rotacione imediatamente qualquer segredo exposto em chat, print, log ou commit.
+- Revogue/suspenda workspaces suspeitos pelo painel da plataforma.
+- Para incidente de pagamento: cancele faturas abertas, confira o pagamento no Mercado Pago e compare valor/moeda antes de marcar manualmente como pago.
+- Para incidente de dados: bloqueie usuarios suspeitos, exporte logs de auditoria, troque senhas e preserve evidencias.
+
+## Checklist De Blindagem
+
+- `npm run lint`, `npm test` e `npm run build` passando.
+- Webhook Mercado Pago configurado sem segredo na URL e com assinatura ativa.
+- `CRON_SECRET`, `AUTH_SECRET`, `DATABASE_URL`, `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET` fortes e exclusivos de producao.
+- Backups Supabase ativos e restore testado periodicamente.
+- LGPD/termos revisados juridicamente antes de uso publico definitivo.
+
 ## Proximos Passos
 
 O MVP ja possui os fluxos principais implementados e o deploy de producao esta ativo. As proximas frentes sao:
@@ -172,4 +198,4 @@ O MVP ja possui os fluxos principais implementados e o deploy de producao esta a
 - Manter validacoes de seguranca, webhook Mercado Pago, PIX e crons acompanhados em producao.
 - Evoluir testes conforme novas regras forem adicionadas.
 
-Consulte `oqfalta.txt` para a lista priorizada de pendencias.
+Consulte `docs/ajustes-pendentes.md` para a lista de pendencias.

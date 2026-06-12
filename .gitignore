@@ -2,9 +2,11 @@ node_modules
 .next
 out
 dist
+dist-desktop
 .env
 .env*.local
 coverage
+backups
 *.log
 prisma/dev.db
 public/uploads

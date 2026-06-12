@@ -42,10 +42,7 @@ export async function POST(request: NextRequest) {
     return redirectToInvoices(request, { error: "configuration" });
   }
 
-  const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-  const notificationUrl = webhookSecret
-    ? `${request.nextUrl.origin}/api/mercado-pago/webhook?secret=${encodeURIComponent(webhookSecret)}`
-    : undefined;
+  const notificationUrl = `${request.nextUrl.origin}/api/mercado-pago/webhook`;
 
   const body = {
     items: [
@@ -59,7 +56,7 @@ export async function POST(request: NextRequest) {
     ],
     external_reference: invoiceId,
     metadata: { invoice_id: invoiceId },
-    ...(notificationUrl ? { notification_url: notificationUrl } : {}),
+    notification_url: notificationUrl,
     back_urls: {
       success: `${request.nextUrl.origin}/app/configuracoes/faturas?success=true`,
       failure: `${request.nextUrl.origin}/app/configuracoes/faturas?canceled=true`,
