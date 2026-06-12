@@ -171,8 +171,8 @@ export function RegisterWorkspaceForm({
         <p>O primeiro administrador só conseguirá acessar o sistema depois que a empresa for aprovada no painel da plataforma.</p>
       </div>
 
-      <label className="rule-callout" style={{ display: "flex", gap: "10px", alignItems: "flex-start", cursor: "pointer" }}>
-        <input name="acceptedTerms" type="checkbox" value="yes" required style={{ marginTop: "4px" }} />
+      <label className="rule-callout lgpd-consent">
+        <input name="acceptedTerms" type="checkbox" value="yes" required />
         <span>
           <strong>Termos e privacidade</strong>
           <p>Declaro que sou responsável pelos dados cadastrados pela empresa e aceito o tratamento de dados necessário para operação do sistema, conforme a política inicial de LGPD.</p>

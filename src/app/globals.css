@@ -550,6 +550,32 @@ input[type="color"] {
   font-size: 12px;
 }
 
+.lgpd-consent {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  cursor: pointer;
+  padding: 16px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+}
+
+.lgpd-consent input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.lgpd-consent strong {
+  font-size: 15px;
+}
+
+.lgpd-consent p {
+  font-size: 13px;
+}
+
 /* ── Layout Shells ──────────────────────────────────────────── */
 
 .page-shell {
